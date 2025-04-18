@@ -1,0 +1,45 @@
+server:  # 服务器配置
+  port: 8080  # 服务监听端口，默认8080
+  host: "0.0.0.0"  # 服务监听地址，默认0.0.0.0表示监听所有网络接口
+  read_timeout: 30s  # 读取超时时间，默认30秒
+  write_timeout: 30s  # 写入超时时间，默认30秒
+
+database:  # 数据库配置
+  host: "localhost"  # 数据库主机地址，默认localhost
+  port: 3306  # 数据库端口，默认3306
+  user: "root"  # 数据库用户名，默认root
+  password: "123456"  # 数据库密码，默认123456
+  name: "app"  # 数据库名称，默认app
+  max_connections: 100  # 最大连接数，默认100
+  conn_max_lifetime: "1h"  # 连接最大生存时间，默认1小时
+  conn_max_idle_time: "30m"  # 空闲连接最大生存时间，默认30分钟
+
+redis:  # Redis配置
+  host: "localhost"  # Redis主机地址，默认localhost
+  port: 6379  # Redis端口，默认6379
+  password: ""  # Redis密码，默认为空
+  db: 0  # Redis数据库索引，默认0
+  pool_size: 100  # 连接池大小，默认100
+
+jwt:  # JWT配置
+  secret_key: "your-secret-key-change-in-production"  # JWT密钥，生产环境需更换
+  expires_time: "24h"  # 令牌有效期，默认24小时
+  issuer: "app"  # 签发者，默认app
+
+logger:  # 日志配置
+  level: "info"  # 日志级别: debug, info, warn, error, dpanic, panic, fatal
+  format: "console"  # 日志格式: json, console
+  output_path: "./logs"  # 日志输出路径
+  max_size: 100  # 单个日志文件最大大小，单位MB
+  max_age: 30  # 日志文件最大保存天数
+  max_backups: 10  # 最大保留日志文件数量
+  compress: true  # 是否压缩日志文件
+
+sms:  # 短信服务配置
+  aliyun:  # 阿里云短信服务配置
+    access_key_id: ""  # 阿里云访问密钥ID
+    access_key_secret: ""  # 阿里云访问密钥密钥
+    endpoint: "dysmsapi.aliyuncs.com"  # API接入地址
+    sign_name: ""  # 短信签名
+    templates:  # 短信模板代码配置
+      verification_code: "SMS_154950909"  # 验证码短信模板代码
