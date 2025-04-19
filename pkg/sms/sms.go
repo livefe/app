@@ -45,9 +45,9 @@ func (c *SMSClient) SendSMS(request SMSRequest) (*SMSResponse, error) {
 	return c.provider.SendSMS(request)
 }
 
-// GetDefaultSMSClient 获取默认的短信客户端
+// GetSMSClient 获取短信客户端
 // 目前默认使用阿里云短信服务，未来可以根据配置动态选择不同的短信服务提供商
-func GetDefaultSMSClient() (*SMSClient, error) {
+func GetSMSClient() (*SMSClient, error) {
 	// 创建阿里云短信服务提供商实例
 	provider, err := NewAliyunSMSProvider()
 	if err != nil {

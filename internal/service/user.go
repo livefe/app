@@ -73,7 +73,7 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	}
 
 	// 发送短信验证码
-	client, err := sms.GetDefaultSMSClient()
+	client, err := sms.GetSMSClient()
 	if err != nil {
 		logger.WithError(err).Error("创建短信客户端失败")
 		return nil, fmt.Errorf("创建短信客户端失败: %w", err)
@@ -83,8 +83,7 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	smsConfig := config.GetSMSConfig()
 	templateCode := smsConfig.Aliyun.Templates["verification_code"]
 	if templateCode == "" {
-		err := errors.New("验证码短信模板未配置")
-		logger.Error(err)
+		logger.Error("验证码短信模板未配置")
 		return nil, fmt.Errorf("短信模板配置错误: %w", err)
 	}
 
