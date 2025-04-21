@@ -21,6 +21,8 @@ type UserRepository interface {
 	FindByID(id uint) (*model.User, error)
 	// Create 创建用户
 	Create(user *model.User) error
+	// SoftDelete 软删除用户（注销账号）
+	SoftDelete(id uint) error
 }
 
 // userRepository 用户仓库实现
@@ -64,4 +66,16 @@ func (r *userRepository) FindByID(id uint) (*model.User, error) {
 // Create 创建用户
 func (r *userRepository) Create(user *model.User) error {
 	return r.db.Create(user).Error
+}
+
+// SoftDelete 软删除用户（注销账号）
+func (r *userRepository) SoftDelete(id uint) error {
+	result := r.db.Delete(&model.User{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+	return nil
 }

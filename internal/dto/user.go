@@ -1,8 +1,18 @@
 package dto
 
+// VerificationType 验证码类型
+type VerificationType string
+
+// 验证码类型常量
+const (
+	VerificationTypeLogin      VerificationType = "login"      // 登录验证码
+	VerificationTypeDeactivate VerificationType = "deactivate" // 注销账号验证码
+)
+
 // SendVerificationCodeRequest 发送验证码请求
 type SendVerificationCodeRequest struct {
-	Mobile string `json:"mobile" binding:"required,mobile_cn"` // 手机号
+	Mobile string           `json:"mobile" binding:"required,mobile_cn"` // 手机号
+	Type   VerificationType `json:"type" binding:"required"`             // 验证码类型
 }
 
 // SendVerificationCodeResponse 发送验证码响应
@@ -37,4 +47,11 @@ type UserInfoResponse struct {
 	Avatar    string `json:"avatar"`
 	Status    int    `json:"status"`
 	CreatedAt string `json:"created_at"`
+}
+
+// DeactivateAccountRequest 注销账号请求
+type DeactivateAccountRequest struct {
+	UserID uint   `json:"user_id" binding:"required"`          // 用户ID
+	Mobile string `json:"mobile" binding:"required,mobile_cn"` // 手机号
+	Code   string `json:"code" binding:"required,len=6"`       // 验证码
 }

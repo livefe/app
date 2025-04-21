@@ -103,3 +103,44 @@ func (h *UserHandler) VerificationCodeLogin(c *gin.Context) {
 
 	response.Success(c, "登录成功", resp)
 }
+
+// DeactivateAccount 注销账号
+func (h *UserHandler) DeactivateAccount(c *gin.Context) {
+	var req dto.DeactivateAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误", err)
+		return
+	}
+
+	// 从上下文中获取当前用户ID
+	currentUserID, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "未授权访问", nil)
+		return
+	}
+
+	// 权限检查：用户只能注销自己的账号
+	if currentUserID.(uint) != req.UserID {
+		response.Forbidden(c, "权限不足，无法注销其他用户账号", nil)
+		return
+	}
+
+	// 调用服务注销账号
+	err := h.userService.DeactivateAccount(&req)
+	if err != nil {
+		// 根据错误类型设置不同的状态码和错误消息
+		switch err {
+		case service.ErrInvalidCode:
+			response.BadRequest(c, "验证码无效或已过期", err)
+		case service.ErrUserNotFound:
+			response.NotFound(c, "用户不存在", err)
+		case service.ErrDeactivateFailed:
+			response.InternalServerError(c, "注销账号失败", err)
+		default:
+			response.InternalServerError(c, "注销账号失败", err)
+		}
+		return
+	}
+
+	response.Success(c, "账号已成功注销", nil)
+}

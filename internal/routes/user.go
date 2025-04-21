@@ -15,25 +15,44 @@ func RegisterUserRoutes(r *gin.Engine) {
 	// 获取数据库连接
 	db := database.GetGormDB()
 
-	// 初始化仓库
+	// 初始化仓库层
 	userRepo := repository.NewUserRepository(db)
-	// 初始化SMS记录仓库
 	smsRepo := repository.NewSMSRepository(db)
 
-	// 初始化服务
+	// 初始化服务层
 	userService := service.NewUserService(userRepo, smsRepo)
 
 	// 初始化处理器
 	userHandler := handler.NewUserHandler(userService)
 
+	// 用户API根路径
+	apiGroup := r.Group("/api")
+
 	// 用户相关API组
-	userGroup := r.Group("/api/user")
-	{
-		// 发送验证码
-		userGroup.POST("/verification-code", userHandler.SendVerificationCode)
-		// 验证码登录
-		userGroup.POST("/login/code", userHandler.VerificationCodeLogin)
-		// 获取用户信息 - 添加JWT认证中间件
-		userGroup.GET("/:id", middleware.AuthMiddleware(), userHandler.GetUserInfo)
-	}
+	userGroup := apiGroup.Group("/user")
+
+	// 注册公开路由（无需认证）
+	registerPublicRoutes(userGroup, userHandler)
+
+	// 注册需要认证的路由
+	registerAuthenticatedRoutes(userGroup, userHandler)
+}
+
+// registerPublicRoutes 注册公开路由（无需认证）
+func registerPublicRoutes(group *gin.RouterGroup, handler *handler.UserHandler) {
+	// 发送验证码
+	group.POST("/verification-code", handler.SendVerificationCode)
+	// 验证码登录
+	group.POST("/login/code", handler.VerificationCodeLogin)
+}
+
+// registerAuthenticatedRoutes 注册需要认证的路由
+func registerAuthenticatedRoutes(group *gin.RouterGroup, handler *handler.UserHandler) {
+	// 添加认证中间件
+	authGroup := group.Group("/", middleware.AuthMiddleware())
+
+	// 获取用户信息
+	authGroup.GET("/:id", handler.GetUserInfo)
+	// 注销账号
+	authGroup.POST("/deactivate", handler.DeactivateAccount)
 }

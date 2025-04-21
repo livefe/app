@@ -21,12 +21,15 @@ var (
 	ErrUserNotFound = errors.New("用户不存在")
 	// ErrInvalidCode 验证码无效错误
 	ErrInvalidCode = errors.New("验证码无效或已过期")
+	// ErrDeactivateFailed 注销失败错误
+	ErrDeactivateFailed = errors.New("账号注销失败")
 )
 
 // 验证码相关常量
 const (
-	// VerificationCodePrefix Redis中验证码的前缀
-	VerificationCodePrefix = "verification_code:"
+	// 验证码前缀，根据不同类型区分
+	VerificationCodePrefixLogin      = "verification_code:login:"
+	VerificationCodePrefixDeactivate = "verification_code:deactivate:"
 	// VerificationCodeExpiration 验证码有效期（5分钟）
 	VerificationCodeExpiration = 5 * time.Minute
 	// VerificationCodeLength 验证码长度
@@ -41,6 +44,8 @@ type UserService interface {
 	VerificationCodeLogin(req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)
 	// GetUserInfo 获取用户信息
 	GetUserInfo(id uint) (*dto.UserInfoResponse, error)
+	// DeactivateAccount 注销账号
+	DeactivateAccount(req *dto.DeactivateAccountRequest) error
 }
 
 // userService 用户服务实现
@@ -59,13 +64,24 @@ func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRe
 
 // SendVerificationCode 发送验证码
 func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) {
-	logger.WithField("mobile", req.Mobile).Info("开始发送验证码")
+	logger.WithField("mobile", req.Mobile).WithField("type", req.Type).Info("开始发送验证码")
 
 	// 生成随机验证码
 	code := generateVerificationCode(VerificationCodeLength)
 
+	// 根据验证码类型选择不同的前缀
+	var prefix string
+	switch req.Type {
+	case dto.VerificationTypeLogin:
+		prefix = VerificationCodePrefixLogin
+	case dto.VerificationTypeDeactivate:
+		prefix = VerificationCodePrefixDeactivate
+	default:
+		prefix = VerificationCodePrefixLogin
+	}
+
 	// 将验证码保存到Redis，设置过期时间
-	key := VerificationCodePrefix + req.Mobile
+	key := prefix + req.Mobile
 	err := redis.Set(key, code, VerificationCodeExpiration)
 	if err != nil {
 		logger.WithError(err).Error("保存验证码到Redis失败")
@@ -85,6 +101,17 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	if templateCode == "" {
 		logger.Error("验证码短信模板未配置")
 		return nil, fmt.Errorf("短信模板配置错误: %w", err)
+	}
+
+	// 根据验证码类型构建不同的短信内容
+	var smsContent string
+	switch req.Type {
+	case dto.VerificationTypeLogin:
+		smsContent = fmt.Sprintf("您的登录验证码是：%s，5分钟内有效。", code)
+	case dto.VerificationTypeDeactivate:
+		smsContent = fmt.Sprintf("您的账号注销验证码是：%s，5分钟内有效。请谨慎操作，注销后账号将无法恢复。", code)
+	default:
+		smsContent = fmt.Sprintf("您的验证码是：%s，5分钟内有效。", code)
 	}
 
 	// 构建短信请求
@@ -107,7 +134,7 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	smsRecord := &model.SMSRecord{
 		PhoneNumber:   req.Mobile,
 		Type:          model.SMSTypeVerification,
-		Content:       fmt.Sprintf("您的验证码是：%s，5分钟内有效。", code),
+		Content:       smsContent,
 		TemplateCode:  templateCode,
 		TemplateParam: fmt.Sprintf(`{"code":"%s"}`, code),
 		Status:        "success",
@@ -131,8 +158,8 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 func (s *userService) VerificationCodeLogin(req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error) {
 	logger.WithField("mobile", req.Mobile).Info("验证码登录")
 
-	// 从Redis获取验证码
-	key := VerificationCodePrefix + req.Mobile
+	// 从Redis获取验证码（登录验证码）
+	key := VerificationCodePrefixLogin + req.Mobile
 	savedCode, err := redis.Get(key)
 	if err != nil || savedCode != req.Code {
 		logger.WithFields(map[string]interface{}{
@@ -227,4 +254,54 @@ func (s *userService) GetUserInfo(id uint) (*dto.UserInfoResponse, error) {
 	}
 
 	return response, nil
+}
+
+// DeactivateAccount 注销账号
+func (s *userService) DeactivateAccount(req *dto.DeactivateAccountRequest) error {
+	logger.WithField("user_id", req.UserID).Info("开始注销账号")
+
+	// 验证验证码（注销验证码）
+	key := VerificationCodePrefixDeactivate + req.Mobile
+	savedCode, err := redis.Get(key)
+	if err != nil || savedCode != req.Code {
+		logger.WithFields(map[string]interface{}{
+			"mobile": req.Mobile,
+			"error":  err,
+		}).Warn("验证码验证失败")
+		return ErrInvalidCode
+	}
+
+	// 验证成功后删除验证码
+	_, _ = redis.Del(key)
+
+	// 查找用户
+	user, err := s.userRepo.FindByID(req.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrRecordNotFound) {
+			logger.WithField("user_id", req.UserID).Warn("用户不存在")
+			return ErrUserNotFound
+		}
+		logger.WithError(err).Error("查询用户失败")
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 验证手机号是否匹配
+	if user.Mobile != req.Mobile {
+		logger.WithFields(map[string]interface{}{
+			"user_id":      req.UserID,
+			"user_mobile":  user.Mobile,
+			"input_mobile": req.Mobile,
+		}).Warn("手机号不匹配，注销失败")
+		return errors.New("手机号不匹配，注销失败")
+	}
+
+	// 执行注销操作（软删除）
+	err = s.userRepo.SoftDelete(req.UserID)
+	if err != nil {
+		logger.WithError(err).Error("注销账号失败")
+		return ErrDeactivateFailed
+	}
+
+	logger.WithField("user_id", req.UserID).Info("账号注销成功")
+	return nil
 }
