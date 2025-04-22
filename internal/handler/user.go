@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"app/internal/dto"
 	"app/internal/service"
@@ -143,4 +144,52 @@ func (h *UserHandler) DeactivateAccount(c *gin.Context) {
 	}
 
 	response.Success(c, "账号已成功注销", nil)
+}
+
+// Logout 退出登录
+func (h *UserHandler) Logout(c *gin.Context) {
+	var req dto.LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误", err)
+		return
+	}
+
+	// 从上下文中获取当前用户ID
+	currentUserID, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "未授权访问", nil)
+		return
+	}
+
+	// 权限检查：用户只能退出自己的登录
+	if currentUserID.(uint) != req.UserID {
+		response.Forbidden(c, "权限不足，无法退出其他用户的登录", nil)
+		return
+	}
+
+	// 获取请求头中的令牌
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		response.BadRequest(c, "未提供授权令牌", nil)
+		return
+	}
+
+	// 提取令牌
+	parts := strings.SplitN(authHeader, " ", 2)
+	if !(len(parts) == 2 && parts[0] == "Bearer") {
+		response.BadRequest(c, "无效的授权格式", nil)
+		return
+	}
+
+	// 设置令牌到请求中
+	req.Token = parts[1]
+
+	// 调用服务退出登录
+	resp, err := h.userService.Logout(&req)
+	if err != nil {
+		response.InternalServerError(c, "退出登录失败", err)
+		return
+	}
+
+	response.Success(c, resp.Message, nil)
 }

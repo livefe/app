@@ -55,4 +55,6 @@ func registerAuthenticatedRoutes(group *gin.RouterGroup, handler *handler.UserHa
 	authGroup.GET("/:id", handler.GetUserInfo)
 	// 注销账号
 	authGroup.POST("/deactivate", handler.DeactivateAccount)
+	// 退出登录
+	authGroup.POST("/logout", handler.Logout)
 }

@@ -55,3 +55,14 @@ type DeactivateAccountRequest struct {
 	Mobile string `json:"mobile" binding:"required,mobile_cn"` // 手机号
 	Code   string `json:"code" binding:"required,len=6"`       // 验证码
 }
+
+// LogoutRequest 退出登录请求
+type LogoutRequest struct {
+	UserID uint   `json:"user_id" binding:"required"` // 用户ID
+	Token  string `json:"-"`                          // JWT令牌，由处理器内部设置，不从请求中获取
+}
+
+// LogoutResponse 退出登录响应
+type LogoutResponse struct {
+	Message string `json:"message"` // 响应消息
+}

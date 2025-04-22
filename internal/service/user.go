@@ -34,6 +34,8 @@ const (
 	VerificationCodeExpiration = 5 * time.Minute
 	// VerificationCodeLength 验证码长度
 	VerificationCodeLength = 6
+	// TokenBlacklistPrefix 令牌黑名单前缀，与middleware包中保持一致
+	TokenBlacklistPrefix = "token:blacklist:"
 )
 
 // UserService 用户服务接口
@@ -46,6 +48,8 @@ type UserService interface {
 	GetUserInfo(id uint) (*dto.UserInfoResponse, error)
 	// DeactivateAccount 注销账号
 	DeactivateAccount(req *dto.DeactivateAccountRequest) error
+	// Logout 退出登录
+	Logout(req *dto.LogoutRequest) (*dto.LogoutResponse, error)
 }
 
 // userService 用户服务实现
@@ -254,6 +258,39 @@ func (s *userService) GetUserInfo(id uint) (*dto.UserInfoResponse, error) {
 	}
 
 	return response, nil
+}
+
+// Logout 退出登录
+func (s *userService) Logout(req *dto.LogoutRequest) (*dto.LogoutResponse, error) {
+	logger.WithField("user_id", req.UserID).Info("用户退出登录")
+
+	// 解析令牌，获取过期时间
+	claims, err := jwt.ParseToken(req.Token)
+	if err != nil {
+		// 如果令牌已经无效，则直接返回成功
+		if err == jwt.ErrTokenInvalid || err == jwt.ErrTokenExpired {
+			return &dto.LogoutResponse{Message: "退出登录成功"}, nil
+		}
+		return nil, fmt.Errorf("解析令牌失败: %w", err)
+	}
+
+	// 计算令牌剩余有效期
+	expTime := claims.ExpiresAt.Time
+	ttl := time.Until(expTime)
+	if ttl <= 0 {
+		// 令牌已过期，直接返回成功
+		return &dto.LogoutResponse{Message: "退出登录成功"}, nil
+	}
+
+	// 将令牌加入黑名单，过期时间与令牌相同
+	blacklistKey := TokenBlacklistPrefix + req.Token
+	err = redis.Set(blacklistKey, "revoked", ttl)
+	if err != nil {
+		logger.WithError(err).Error("将令牌加入黑名单失败")
+		return nil, fmt.Errorf("退出登录失败: %w", err)
+	}
+
+	return &dto.LogoutResponse{Message: "退出登录成功"}, nil
 }
 
 // DeactivateAccount 注销账号

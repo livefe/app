@@ -5,10 +5,14 @@ import (
 	"strings"
 
 	"app/pkg/jwt"
+	"app/pkg/redis"
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
+
+// TokenBlacklistPrefix 令牌黑名单前缀
+const TokenBlacklistPrefix = "token:blacklist:"
 
 // AuthMiddleware 创建JWT认证中间件
 func AuthMiddleware() gin.HandlerFunc {
@@ -30,6 +34,16 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
+
+		// 检查令牌是否在黑名单中
+		blacklistKey := TokenBlacklistPrefix + tokenString
+		_, err := redis.Get(blacklistKey)
+		if err == nil {
+			// 令牌在黑名单中，拒绝访问
+			response.Unauthorized(c, "令牌已失效，请重新登录", nil)
+			c.Abort()
+			return
+		}
 
 		// 解析令牌
 		claims, err := jwt.ParseToken(tokenString)
