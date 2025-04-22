@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"app/config"
+	"app/internal/constant"
 	"app/internal/dto"
 	"app/internal/model"
 	"app/internal/repository"
@@ -18,25 +19,15 @@ import (
 
 var (
 	// ErrUserNotFound 用户不存在错误
-	ErrUserNotFound = errors.New("用户不存在")
+	ErrUserNotFound = errors.New(constant.ErrUserNotFound)
 	// ErrInvalidCode 验证码无效错误
-	ErrInvalidCode = errors.New("验证码无效或已过期")
+	ErrInvalidCode = errors.New(constant.ErrInvalidCode)
 	// ErrDeactivateFailed 注销失败错误
-	ErrDeactivateFailed = errors.New("账号注销失败")
+	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed)
 )
 
-// 验证码相关常量
-const (
-	// 验证码前缀，根据不同类型区分
-	VerificationCodePrefixLogin      = "verification_code:login:"
-	VerificationCodePrefixDeactivate = "verification_code:deactivate:"
-	// VerificationCodeExpiration 验证码有效期（5分钟）
-	VerificationCodeExpiration = 5 * time.Minute
-	// VerificationCodeLength 验证码长度
-	VerificationCodeLength = 6
-	// TokenBlacklistPrefix 令牌黑名单前缀，与middleware包中保持一致
-	TokenBlacklistPrefix = "token:blacklist:"
-)
+// TokenBlacklistPrefix 令牌黑名单前缀，使用常量包中的定义
+const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
 
 // UserService 用户服务接口
 type UserService interface {
@@ -71,22 +62,22 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	logger.WithField("mobile", req.Mobile).WithField("type", req.Type).Info("开始发送验证码")
 
 	// 生成随机验证码
-	code := generateVerificationCode(VerificationCodeLength)
+	code := generateVerificationCode(constant.VerificationCodeLength)
 
 	// 根据验证码类型选择不同的前缀
 	var prefix string
 	switch req.Type {
 	case dto.VerificationTypeLogin:
-		prefix = VerificationCodePrefixLogin
+		prefix = constant.VerificationCodePrefixLogin
 	case dto.VerificationTypeDeactivate:
-		prefix = VerificationCodePrefixDeactivate
+		prefix = constant.VerificationCodePrefixDeactivate
 	default:
-		prefix = VerificationCodePrefixLogin
+		prefix = constant.VerificationCodePrefixLogin
 	}
 
 	// 将验证码保存到Redis，设置过期时间
 	key := prefix + req.Mobile
-	err := redis.Set(key, code, VerificationCodeExpiration)
+	err := redis.Set(key, code, constant.VerificationCodeExpiration)
 	if err != nil {
 		logger.WithError(err).Error("保存验证码到Redis失败")
 		return nil, fmt.Errorf("保存验证码失败: %w", err)
@@ -137,7 +128,7 @@ func (s *userService) SendVerificationCode(req *dto.SendVerificationCodeRequest)
 	// 记录短信发送信息
 	smsRecord := &model.SMSRecord{
 		PhoneNumber:   req.Mobile,
-		Type:          model.SMSTypeVerification,
+		Type:          constant.SMSTypeVerification,
 		Content:       smsContent,
 		TemplateCode:  templateCode,
 		TemplateParam: fmt.Sprintf(`{"code":"%s"}`, code),
@@ -163,7 +154,7 @@ func (s *userService) VerificationCodeLogin(req *dto.VerificationCodeLoginReques
 	logger.WithField("mobile", req.Mobile).Info("验证码登录")
 
 	// 从Redis获取验证码（登录验证码）
-	key := VerificationCodePrefixLogin + req.Mobile
+	key := constant.VerificationCodePrefixLogin + req.Mobile
 	savedCode, err := redis.Get(key)
 	if err != nil || savedCode != req.Code {
 		logger.WithFields(map[string]interface{}{
@@ -185,7 +176,7 @@ func (s *userService) VerificationCodeLogin(req *dto.VerificationCodeLoginReques
 			Mobile:   req.Mobile,
 			Username: req.Mobile,                            // 默认使用手机号作为用户名
 			Nickname: "用户" + req.Mobile[len(req.Mobile)-4:], // 使用手机号后4位作为昵称
-			Status:   1,                                     // 正常状态
+			Status:   constant.UserStatusNormal,             // 正常状态
 		}
 
 		// 保存新用户
@@ -197,7 +188,7 @@ func (s *userService) VerificationCodeLogin(req *dto.VerificationCodeLoginReques
 	}
 
 	// 检查用户状态
-	if user.Status != 1 {
+	if user.Status != constant.UserStatusNormal {
 		logger.WithField("user_id", user.ID).Warn("账号已被禁用")
 		return nil, errors.New("账号已被禁用")
 	}
@@ -298,7 +289,7 @@ func (s *userService) DeactivateAccount(req *dto.DeactivateAccountRequest) error
 	logger.WithField("user_id", req.UserID).Info("开始注销账号")
 
 	// 验证验证码（注销验证码）
-	key := VerificationCodePrefixDeactivate + req.Mobile
+	key := constant.VerificationCodePrefixDeactivate + req.Mobile
 	savedCode, err := redis.Get(key)
 	if err != nil || savedCode != req.Code {
 		logger.WithFields(map[string]interface{}{

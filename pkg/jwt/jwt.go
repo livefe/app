@@ -6,15 +6,16 @@ import (
 	"time"
 
 	"app/config"
+	"app/internal/constant"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 // 定义错误类型
 var (
-	ErrTokenExpired     = errors.New("令牌已过期")
-	ErrTokenInvalid     = errors.New("无效的令牌")
-	ErrTokenNotProvided = errors.New("未提供令牌")
+	ErrTokenExpired     = errors.New(constant.ErrTokenExpired)
+	ErrTokenInvalid     = errors.New(constant.ErrTokenInvalid)
+	ErrTokenNotProvided = errors.New(constant.ErrTokenNotProvided)
 )
 
 // CustomClaims 自定义JWT声明结构体

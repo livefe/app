@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"app/internal/constant"
 	"app/pkg/jwt"
 	"app/pkg/redis"
 	"app/pkg/response"
@@ -12,13 +13,13 @@ import (
 )
 
 // TokenBlacklistPrefix 令牌黑名单前缀
-const TokenBlacklistPrefix = "token:blacklist:"
+const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
 
 // AuthMiddleware 创建JWT认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从请求头获取令牌
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(constant.AuthHeaderName)
 		if authHeader == "" {
 			response.Unauthorized(c, "未提供授权令牌", jwt.ErrTokenNotProvided)
 			c.Abort()
@@ -27,7 +28,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// 提取令牌
 		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
+		if !(len(parts) == 2 && parts[0] == constant.AuthHeaderPrefix) {
 			response.Unauthorized(c, "无效的授权格式", nil)
 			c.Abort()
 			return

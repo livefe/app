@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"app/config"
+	"app/internal/constant"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	dysmsapi20170525 "github.com/alibabacloud-go/dysmsapi-20170525/v4/client"
@@ -50,7 +51,7 @@ func createClient(cfg config.AliyunSMSConfig) (*dysmsapi20170525.Client, error) 
 	// 设置API接入地址
 	endpoint := cfg.Endpoint
 	if endpoint == "" {
-		endpoint = "dysmsapi.aliyuncs.com" // 使用默认值
+		endpoint = constant.AliyunSMSDefaultEndpoint // 使用常量定义的默认值
 	}
 	clientConfig.Endpoint = tea.String(endpoint)
 
