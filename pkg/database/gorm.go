@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"app/config"
@@ -34,14 +33,14 @@ func InitGormDB() error {
 		return fmt.Errorf("解析GORM数据库配置失败: %w", err)
 	}
 
-	// 配置GORM日志
+	// 配置GORM日志（已简化）
 	gormLogger := logger.New(
-		log.New(log.Writer(), "\r\n[GORM] ", log.LstdFlags), // io writer
+		nil, // 移除日志输出
 		logger.Config{
 			SlowThreshold:             200 * time.Millisecond, // 慢SQL阈值
-			LogLevel:                  gormConfig.LogLevel,    // 日志级别
+			LogLevel:                  logger.Silent,          // 静默日志级别
 			IgnoreRecordNotFoundError: true,                   // 忽略记录未找到错误
-			Colorful:                  true,                   // 彩色打印
+			Colorful:                  false,                  // 关闭彩色打印
 		},
 	)
 
@@ -77,7 +76,7 @@ func InitGormDB() error {
 		return fmt.Errorf("GORM数据库连接测试失败: %w", err)
 	}
 
-	log.Println("GORM数据库连接成功")
+	// 数据库连接成功
 
 	// 设置全局GormDB实例
 	GormDB = db
@@ -102,14 +101,14 @@ func parseGormConfig() (*GormConfig, error) {
 	connMaxLifetime, err := time.ParseDuration(cfg.ConnMaxLifetime)
 	if err != nil {
 		connMaxLifetime = time.Hour // 默认值为1小时
-		log.Printf("解析连接最大生存时间失败: %v, 使用默认值1小时", err)
+		// 解析连接最大生存时间失败，使用默认值1小时
 	}
 
 	// 解析空闲连接最大生存时间
 	connMaxIdleTime, err := time.ParseDuration(cfg.ConnMaxIdleTime)
 	if err != nil {
 		connMaxIdleTime = time.Minute * 30 // 默认值为30分钟
-		log.Printf("解析空闲连接最大生存时间失败: %v, 使用默认值30分钟", err)
+		// 解析空闲连接最大生存时间失败，使用默认值30分钟
 	}
 
 	// 计算最大空闲连接数
@@ -124,7 +123,7 @@ func parseGormConfig() (*GormConfig, error) {
 		MaxIdleConns:    maxIdleConns,
 		ConnMaxLifetime: connMaxLifetime,
 		ConnMaxIdleTime: connMaxIdleTime,
-		LogLevel:        logger.Info, // 默认日志级别
+		LogLevel:        logger.Silent, // 静默日志级别
 	}, nil
 }
 
@@ -136,7 +135,7 @@ func GetGormDB() *gorm.DB {
 // CloseGormDB 关闭GORM数据库连接
 func CloseGormDB() error {
 	if GormDB != nil {
-		log.Println("正在关闭GORM数据库连接...")
+		// 正在关闭GORM数据库连接
 
 		// 获取底层SQL DB连接
 		sqlDB, err := GormDB.DB()
@@ -150,7 +149,7 @@ func CloseGormDB() error {
 			return fmt.Errorf("关闭GORM数据库连接失败: %w", err)
 		}
 
-		log.Println("GORM数据库连接已关闭")
+		// GORM数据库连接已关闭
 		GormDB = nil
 		return nil
 	}
@@ -172,14 +171,12 @@ func CheckGormDBHealth() error {
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
-		log.Printf("GORM数据库健康检查失败: %v", err)
+		// 数据库健康检查失败
 		return fmt.Errorf("GORM数据库健康检查失败: %w", err)
 	}
 
-	// 检查连接池状态并记录详细信息
-	stats := sqlDB.Stats()
-	log.Printf("GORM数据库健康检查通过: 连接池状态 - 打开=%d, 使用中=%d, 空闲=%d, 等待=%d, 最大空闲时间=%v",
-		stats.OpenConnections, stats.InUse, stats.Idle, stats.WaitCount, stats.MaxIdleTimeClosed)
+	// 检查连接池状态
+	_ = sqlDB.Stats() // 仅检查状态，不记录日志
 
 	return nil
 }

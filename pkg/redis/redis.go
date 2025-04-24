@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"app/config"
-	"app/pkg/logger"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -55,8 +54,6 @@ func InitRedis() error {
 		return fmt.Errorf("Redis连接测试失败: %w", err)
 	}
 
-	logger.Info("Redis连接成功")
-
 	// 设置全局Client实例
 	Client = client
 
@@ -86,8 +83,6 @@ func parseRedisConfig() (*RedisConfig, error) {
 // Close 关闭Redis连接
 func Close() error {
 	if Client != nil {
-		logger.Info("关闭Redis连接")
-
 		return Client.Close()
 	}
 	return nil
