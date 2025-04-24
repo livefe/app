@@ -5,7 +5,6 @@ import (
 	mathrand "math/rand"
 	"time"
 
-	"app/pkg/logger"
 )
 
 // GenerateRandomDigits 生成指定长度的随机数字字符串
@@ -26,7 +25,6 @@ func GenerateRandomString(length int, charset string) string {
 	_, err := rand.Read(buf)
 	if err != nil {
 		// 如果安全随机数生成失败，回退到不太安全的方法
-		logger.WithError(err).Warn("安全随机数生成失败，使用备用方法")
 		// 使用math/rand作为备用
 		r := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
 		for i := 0; i < length; i++ {
