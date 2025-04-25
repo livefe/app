@@ -1,0 +1,168 @@
+package middleware
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"app/pkg/logger"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+// 最大请求/响应体大小限制 (5MB)
+const MaxBodySize = 5 * 1024 * 1024
+
+// RequestLogger 请求日志中间件
+func RequestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 生成请求ID
+		requestID := uuid.New().String()
+		c.Set(logger.RequestIDKey, requestID)
+		c.Header("X-Request-ID", requestID)
+
+		// 获取用户ID（如果存在）
+		userID, _ := c.Get(logger.UserIDKey)
+
+		// 记录请求体
+		var requestBody []byte
+		if c.Request.Body != nil && c.Request.ContentLength > 0 {
+			if c.Request.ContentLength <= MaxBodySize {
+				requestBody, _ = io.ReadAll(c.Request.Body)
+				c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+			} else {
+				requestBody = []byte(fmt.Sprintf("[请求体太大，大小: %d字节]", c.Request.ContentLength))
+			}
+		}
+
+		// 构建请求日志字段
+		requestFields := []zap.Field{
+			zap.String("request_id", requestID),
+			zap.String("client_ip", c.ClientIP()),
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.String("query", c.Request.URL.RawQuery),
+			zap.String("user_agent", c.Request.UserAgent()),
+			zap.Any("user_id", userID),
+		}
+
+		// 添加请求体（如果存在）
+		if len(requestBody) > 0 {
+			addBodyToFields(requestBody, "request_body", &requestFields)
+		}
+
+		// 记录请求信息
+		logger.Info(c.Request.Context(), "收到HTTP请求", requestFields...)
+
+		// 记录请求开始时间
+		startTime := time.Now()
+
+		// 创建自定义响应写入器
+		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
+		c.Writer = blw
+
+		// 处理请求
+		c.Next()
+
+		// 计算请求处理时间
+		latency := time.Since(startTime)
+
+		// 构建响应日志字段
+		responseFields := []zap.Field{
+			zap.String("request_id", requestID),
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.Int("status", c.Writer.Status()),
+			zap.Duration("latency", latency),
+			zap.Any("user_id", userID),
+		}
+
+		// 添加响应体（如果存在）
+		if blw.body.Len() > 0 {
+			if blw.body.Len() <= MaxBodySize {
+				addBodyToFields(blw.body.Bytes(), "response_body", &responseFields)
+			} else {
+				responseFields = append(responseFields, zap.String("response_body",
+					fmt.Sprintf("[响应体太大，大小: %d字节]", blw.body.Len())))
+			}
+		}
+
+		// 根据状态码选择日志级别
+		statusCode := c.Writer.Status()
+		if statusCode >= http.StatusInternalServerError {
+			logger.Error(c.Request.Context(), "HTTP请求处理失败", responseFields...)
+		} else if statusCode >= http.StatusBadRequest {
+			logger.Warn(c.Request.Context(), "HTTP请求处理警告", responseFields...)
+		} else {
+			logger.Info(c.Request.Context(), "HTTP请求处理成功", responseFields...)
+		}
+	}
+}
+
+// 添加请求/响应体到日志字段
+func addBodyToFields(body []byte, fieldName string, fields *[]zap.Field) {
+	if isJSON(body) {
+		var jsonMap map[string]interface{}
+		if err := json.Unmarshal(body, &jsonMap); err == nil {
+			// 敏感字段处理
+			sanitizeJSON(jsonMap)
+			*fields = append(*fields, zap.Any(fieldName, jsonMap))
+		} else {
+			*fields = append(*fields, zap.String(fieldName, string(body)))
+		}
+	} else {
+		*fields = append(*fields, zap.String(fieldName, string(body)))
+	}
+}
+
+// bodyLogWriter 是一个自定义的响应写入器，用于捕获响应体
+type bodyLogWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+// Write 实现ResponseWriter接口的Write方法
+func (w *bodyLogWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
+// isJSON 检查字节数组是否为JSON格式
+func isJSON(data []byte) bool {
+	return json.Valid(data) && (data[0] == '{' || data[0] == '[')
+}
+
+// sanitizeJSON 处理JSON中的敏感字段
+func sanitizeJSON(data map[string]interface{}) {
+	sensitiveFields := []string{"password", "token", "secret", "authorization", "auth", "key"}
+
+	for k, v := range data {
+		// 检查是否为敏感字段
+		for _, field := range sensitiveFields {
+			if strings.Contains(strings.ToLower(k), field) {
+				data[k] = "[REDACTED]"
+				break
+			}
+		}
+
+		// 递归处理嵌套的map
+		if nestedMap, ok := v.(map[string]interface{}); ok {
+			sanitizeJSON(nestedMap)
+		}
+
+		// 处理数组中的map
+		if nestedSlice, ok := v.([]interface{}); ok {
+			for _, item := range nestedSlice {
+				if nestedMap, ok := item.(map[string]interface{}); ok {
+					sanitizeJSON(nestedMap)
+				}
+			}
+		}
+	}
+}
