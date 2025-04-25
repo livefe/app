@@ -29,8 +29,6 @@ func main() {
 	// 获取配置信息
 	cfg := config.GetConfig()
 
-	// 日志初始化已移除
-
 	// 初始化数据库连接
 	err = database.InitGormDB()
 	if err != nil {
