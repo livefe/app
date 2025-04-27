@@ -193,7 +193,15 @@ func applyDefaultConfig(cfg *config.LoggerConfig) {
 // Close 关闭日志记录器
 func Close() error {
 	if logger != nil {
-		return logger.Sync()
+		err := logger.Sync()
+		// 忽略标准输出/标准错误的同步错误，这些错误通常在应用关闭时发生
+		// 当标准输出已关闭但日志系统仍尝试同步时会出现这些错误
+		if err != nil && (strings.Contains(err.Error(), "sync /dev/stdout") ||
+			strings.Contains(err.Error(), "sync /dev/stderr") ||
+			strings.Contains(err.Error(), "The handle is invalid")) {
+			return nil
+		}
+		return err
 	}
 	return nil
 }
