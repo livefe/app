@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"app/internal/middleware"
 	"app/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,8 @@ import (
 
 // SetupRouter 设置路由
 func SetupRouter(r *gin.Engine) *gin.Engine {
+	// 应用全局中间件
+	r.Use(middleware.Logger())
 
 	// 健康检查路由
 	r.GET("/health", HealthCheck)

@@ -12,6 +12,7 @@ import (
 	"app/config"
 	"app/internal/routes"
 	"app/pkg/database"
+	"app/pkg/logger"
 	"app/pkg/redis"
 	"app/pkg/validation"
 
@@ -40,6 +41,13 @@ func main() {
 	err = redis.InitRedis()
 	if err != nil {
 		fmt.Printf("Redis初始化失败: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 初始化日志系统
+	err = logger.Init()
+	if err != nil {
+		fmt.Printf("日志系统初始化失败: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -107,6 +115,11 @@ func setupGracefulShutdown(srv *http.Server) {
 	// 关闭Redis连接
 	if err := redis.Close(); err != nil {
 		fmt.Printf("关闭Redis连接失败: %v\n", err)
+	}
+
+	// 关闭日志系统
+	if err := logger.Close(); err != nil {
+		fmt.Printf("关闭日志系统失败: %v\n", err)
 	}
 
 	fmt.Println("服务器已安全关闭")

@@ -64,6 +64,7 @@ type LoggerConfig struct {
 	MaxAge     int    `mapstructure:"max_age"`
 	MaxBackups int    `mapstructure:"max_backups"`
 	Compress   bool   `mapstructure:"compress"`
+	Console    bool   `mapstructure:"console"` // 是否同时输出到控制台
 }
 
 // SMSConfig 短信服务配置

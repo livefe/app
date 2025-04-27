@@ -19,16 +19,13 @@ import (
 // 最大请求/响应体大小限制 (5MB)
 const MaxBodySize = 5 * 1024 * 1024
 
-// RequestLogger 请求日志中间件
-func RequestLogger() gin.HandlerFunc {
+// Logger 请求日志中间件
+func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 生成请求ID
 		requestID := uuid.New().String()
 		c.Set(logger.RequestIDKey, requestID)
 		c.Header("X-Request-ID", requestID)
-
-		// 获取用户ID（如果存在）
-		userID, _ := c.Get(logger.UserIDKey)
 
 		// 记录请求体
 		var requestBody []byte
@@ -43,13 +40,11 @@ func RequestLogger() gin.HandlerFunc {
 
 		// 构建请求日志字段
 		requestFields := []zap.Field{
-			zap.String("request_id", requestID),
-			zap.String("client_ip", c.ClientIP()),
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
-			zap.String("query", c.Request.URL.RawQuery),
-			zap.String("user_agent", c.Request.UserAgent()),
-			zap.Any("user_id", userID),
+			logger.String("client_ip", c.ClientIP()),
+			logger.String("method", c.Request.Method),
+			logger.String("path", c.Request.URL.Path),
+			logger.String("query", c.Request.URL.RawQuery),
+			logger.String("user_agent", c.Request.UserAgent()),
 		}
 
 		// 添加请求体（如果存在）
@@ -75,12 +70,10 @@ func RequestLogger() gin.HandlerFunc {
 
 		// 构建响应日志字段
 		responseFields := []zap.Field{
-			zap.String("request_id", requestID),
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
-			zap.Int("status", c.Writer.Status()),
-			zap.Duration("latency", latency),
-			zap.Any("user_id", userID),
+			logger.String("method", c.Request.Method),
+			logger.String("path", c.Request.URL.Path),
+			logger.Int("status", c.Writer.Status()),
+			logger.Duration("latency", latency),
 		}
 
 		// 添加响应体（如果存在）
@@ -88,7 +81,7 @@ func RequestLogger() gin.HandlerFunc {
 			if blw.body.Len() <= MaxBodySize {
 				addBodyToFields(blw.body.Bytes(), "response_body", &responseFields)
 			} else {
-				responseFields = append(responseFields, zap.String("response_body",
+				responseFields = append(responseFields, logger.String("response_body",
 					fmt.Sprintf("[响应体太大，大小: %d字节]", blw.body.Len())))
 			}
 		}
@@ -112,12 +105,12 @@ func addBodyToFields(body []byte, fieldName string, fields *[]zap.Field) {
 		if err := json.Unmarshal(body, &jsonMap); err == nil {
 			// 敏感字段处理
 			sanitizeJSON(jsonMap)
-			*fields = append(*fields, zap.Any(fieldName, jsonMap))
+			*fields = append(*fields, logger.Any(fieldName, jsonMap))
 		} else {
-			*fields = append(*fields, zap.String(fieldName, string(body)))
+			*fields = append(*fields, logger.String(fieldName, string(body)))
 		}
 	} else {
-		*fields = append(*fields, zap.String(fieldName, string(body)))
+		*fields = append(*fields, logger.String(fieldName, string(body)))
 	}
 }
 

@@ -45,9 +45,18 @@ var logger *zap.Logger
 // SugaredLogger 提供更便捷的API
 var SugaredLogger *zap.SugaredLogger
 
+// 自定义时间编码器
+func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
+}
+
 // Init 初始化日志系统
 func Init() error {
+	// 获取配置，如果配置不存在则使用默认配置
 	cfg := config.GetLoggerConfig()
+
+	// 应用默认配置值
+	applyDefaultConfig(&cfg)
 
 	// 创建日志目录
 	if err := os.MkdirAll(filepath.Dir(cfg.OutputPath), 0755); err != nil {
@@ -73,13 +82,20 @@ func Init() error {
 
 	// 配置日志编码器
 	var encoder zapcore.Encoder
-	encoderConfig := zap.NewProductionEncoderConfig()
-	encoderConfig.TimeKey = "timestamp"
-	encoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "timestamp",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     timeEncoder,
+		EncodeDuration: zapcore.MillisDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
-	encoderConfig.EncodeDuration = zapcore.MillisDurationEncoder
-	encoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
 
 	switch strings.ToLower(cfg.Format) {
 	case JSONFormat:
@@ -99,10 +115,21 @@ func Init() error {
 		Compress:   cfg.Compress,   // 是否压缩旧日志文件
 	}
 
+	// 创建输出目标
+	var writeSyncer zapcore.WriteSyncer
+
+	// 检查是否需要同时输出到控制台
+	if cfg.Console {
+		consoleSyncer := zapcore.AddSync(os.Stdout)
+		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(lumberJackLogger), consoleSyncer)
+	} else {
+		writeSyncer = zapcore.AddSync(lumberJackLogger)
+	}
+
 	// 创建核心
 	core := zapcore.NewCore(
 		encoder,
-		zapcore.AddSync(lumberJackLogger),
+		writeSyncer,
 		level,
 	)
 
@@ -118,6 +145,39 @@ func Init() error {
 	SugaredLogger = logger.Sugar()
 
 	return nil
+}
+
+// applyDefaultConfig 应用默认配置值
+func applyDefaultConfig(cfg *config.LoggerConfig) {
+	// 默认日志级别
+	if cfg.Level == "" {
+		cfg.Level = InfoLevel
+	}
+
+	// 默认日志格式
+	if cfg.Format == "" {
+		cfg.Format = JSONFormat
+	}
+
+	// 默认输出路径
+	if cfg.OutputPath == "" {
+		cfg.OutputPath = "logs/app.log"
+	}
+
+	// 默认日志文件大小限制 (MB)
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = 100
+	}
+
+	// 默认日志文件保留天数
+	if cfg.MaxAge <= 0 {
+		cfg.MaxAge = 30
+	}
+
+	// 默认日志文件备份数量
+	if cfg.MaxBackups <= 0 {
+		cfg.MaxBackups = 10
+	}
 }
 
 // Close 关闭日志记录器
@@ -139,14 +199,14 @@ func WithContext(ctx context.Context) *zap.Logger {
 
 	// 添加请求ID（如果存在）
 	if id, ok := ctx.Value(RequestIDKey).(string); ok && id != "" {
-		fields = append(fields, zap.String("request_id", id))
+		fields = append(fields, String("request_id", id))
 	}
 
 	// 添加用户ID（如果存在）
 	if id, ok := ctx.Value(UserIDKey).(string); ok && id != "" {
-		fields = append(fields, zap.String("user_id", id))
+		fields = append(fields, String("user_id", id))
 	} else if id, ok := ctx.Value(UserIDKey).(uint); ok && id > 0 {
-		fields = append(fields, zap.String("user_id", fmt.Sprintf("%d", id)))
+		fields = append(fields, String("user_id", fmt.Sprintf("%d", id)))
 	}
 
 	// 返回带有字段的日志记录器
