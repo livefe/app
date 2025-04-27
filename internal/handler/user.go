@@ -31,8 +31,8 @@ func (h *UserHandler) SendVerificationCode(c *gin.Context) {
 		return
 	}
 
-	// 调用服务发送验证码，传递请求上下文
-	resp, err := h.userService.SendVerificationCode(c.Request.Context(), &req)
+	// 调用服务发送验证码，传递Gin上下文
+	resp, err := h.userService.SendVerificationCode(c, &req)
 	if err != nil {
 		response.InternalServerError(c, "发送验证码失败", err)
 		return
@@ -64,8 +64,8 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 		return
 	}
 
-	// 调用服务获取用户信息，传递请求上下文
-	resp, err := h.userService.GetUserInfo(c.Request.Context(), uint(id))
+	// 调用服务获取用户信息，传递Gin上下文
+	resp, err := h.userService.GetUserInfo(c, uint(id))
 	if err != nil {
 		// 根据错误类型设置不同的状态码和错误消息
 		if err == service.ErrUserNotFound {
@@ -87,8 +87,8 @@ func (h *UserHandler) VerificationCodeLogin(c *gin.Context) {
 		return
 	}
 
-	// 调用服务进行验证码登录，传递请求上下文
-	resp, err := h.userService.VerificationCodeLogin(c.Request.Context(), &req)
+	// 调用服务进行验证码登录，传递Gin上下文
+	resp, err := h.userService.VerificationCodeLogin(c, &req)
 	if err != nil {
 		// 根据错误类型设置不同的状态码和错误消息
 		switch err {
@@ -126,8 +126,8 @@ func (h *UserHandler) DeactivateAccount(c *gin.Context) {
 		return
 	}
 
-	// 调用服务注销账号，传递请求上下文
-	err := h.userService.DeactivateAccount(c.Request.Context(), &req)
+	// 调用服务注销账号，传递Gin上下文
+	err := h.userService.DeactivateAccount(c, &req)
 	if err != nil {
 		// 根据错误类型设置不同的状态码和错误消息
 		switch err {
@@ -184,8 +184,8 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	// 设置令牌到请求中
 	req.Token = parts[1]
 
-	// 调用服务退出登录，传递请求上下文
-	resp, err := h.userService.Logout(c.Request.Context(), &req)
+	// 调用服务退出登录，传递Gin上下文
+	resp, err := h.userService.Logout(c, &req)
 	if err != nil {
 		response.InternalServerError(c, "退出登录失败", err)
 		return

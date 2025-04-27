@@ -53,7 +53,7 @@ func Logger() gin.HandlerFunc {
 		}
 
 		// 记录请求信息
-		logger.Info(c.Request.Context(), "收到HTTP请求", requestFields...)
+		logger.Info(c, "收到HTTP请求", requestFields...)
 
 		// 记录请求开始时间
 		startTime := time.Now()
@@ -89,11 +89,11 @@ func Logger() gin.HandlerFunc {
 		// 根据状态码选择日志级别
 		statusCode := c.Writer.Status()
 		if statusCode >= http.StatusInternalServerError {
-			logger.Error(c.Request.Context(), "HTTP请求处理失败", responseFields...)
+			logger.Error(c, "HTTP请求处理失败", responseFields...)
 		} else if statusCode >= http.StatusBadRequest {
-			logger.Warn(c.Request.Context(), "HTTP请求处理警告", responseFields...)
+			logger.Warn(c, "HTTP请求处理警告", responseFields...)
 		} else {
-			logger.Info(c.Request.Context(), "HTTP请求处理成功", responseFields...)
+			logger.Info(c, "HTTP请求处理成功", responseFields...)
 		}
 	}
 }

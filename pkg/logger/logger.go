@@ -58,6 +58,16 @@ func Init() error {
 	// 应用默认配置值
 	applyDefaultConfig(&cfg)
 
+	// 确保日志路径是绝对路径
+	if !filepath.IsAbs(cfg.OutputPath) {
+		// 获取当前工作目录
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("获取当前工作目录失败: %w", err)
+		}
+		cfg.OutputPath = filepath.Join(cwd, cfg.OutputPath)
+	}
+
 	// 创建日志目录
 	if err := os.MkdirAll(filepath.Dir(cfg.OutputPath), 0755); err != nil {
 		return fmt.Errorf("创建日志目录失败: %w", err)
