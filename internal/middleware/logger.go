@@ -22,8 +22,13 @@ const MaxBodySize = 5 * 1024 * 1024
 // Logger 请求日志中间件
 func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 生成请求ID
-		requestID := uuid.New().String()
+		// 获取或生成请求ID
+		requestID := c.GetHeader("X-Request-ID")
+		// 验证请求ID是否为有效的UUID
+		if requestID == "" || !isValidUUID(requestID) {
+			// 如果请求头中没有有效的UUID，则生成新的
+			requestID = uuid.New().String()
+		}
 		c.Set(logger.RequestIDKey, requestID)
 		c.Header("X-Request-ID", requestID)
 
@@ -129,6 +134,12 @@ func (w *bodyLogWriter) Write(b []byte) (int, error) {
 // isJSON 检查字节数组是否为JSON格式
 func isJSON(data []byte) bool {
 	return json.Valid(data) && (data[0] == '{' || data[0] == '[')
+}
+
+// isValidUUID 检查字符串是否为有效的UUID
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
 }
 
 // sensitiveFieldMap 敏感字段映射，用于快速查找
