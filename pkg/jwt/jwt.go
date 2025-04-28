@@ -9,6 +9,7 @@ import (
 	"app/internal/constant"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // 定义错误类型
@@ -35,14 +36,19 @@ func GenerateToken(userID uint, username string, _ string) (string, error) {
 		return "", fmt.Errorf("解析过期时间失败: %w", err)
 	}
 
+	// 获取当前时间
+	now := time.Now()
+	
 	// 创建自定义声明
 	claims := CustomClaims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expDuration)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(expDuration)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),         // 添加NotBefore声明
 			Issuer:    jwtConfig.Issuer,
+			ID:        uuid.New().String(),             // 添加唯一ID
 		},
 	}
 
@@ -107,15 +113,53 @@ func ValidateToken(tokenString string) (bool, error) {
 
 // RefreshToken 刷新JWT令牌
 func RefreshToken(tokenString string) (string, error) {
-	// 解析原令牌
-	claims, err := ParseToken(tokenString)
+	// 解析原令牌，即使已过期
+	claims, err := parseTokenWithoutValidation(tokenString)
 	if err != nil {
-		// 如果是过期错误，我们仍然可以刷新
-		if err != ErrTokenExpired {
-			return "", err
+		return "", fmt.Errorf("无法解析原令牌: %w", err)
+	}
+	
+	// 检查令牌是否已过期太久（超过7天不允许刷新）
+	if claims.ExpiresAt != nil {
+		expTime := claims.ExpiresAt.Time
+		if time.Since(expTime) > 7*24*time.Hour {
+			return "", fmt.Errorf("令牌已过期太久，无法刷新")
 		}
 	}
 
 	// 生成新令牌
 	return GenerateToken(claims.UserID, claims.Username, "")
+}
+
+// parseTokenWithoutValidation 解析JWT令牌但不验证过期时间
+func parseTokenWithoutValidation(tokenString string) (*CustomClaims, error) {
+	if tokenString == "" {
+		return nil, ErrTokenNotProvided
+	}
+
+	jwtConfig := config.GetJWTConfig()
+
+	// 解析令牌但不验证过期时间
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// 验证签名算法
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("意外的签名方法: %v", token.Header["alg"])
+		}
+		return []byte(jwtConfig.SecretKey), nil
+	}, jwt.WithoutClaimsValidation())
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return nil, ErrTokenInvalid
+		}
+		return nil, fmt.Errorf("解析令牌失败: %w", err)
+	}
+
+	// 提取声明
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok {
+		return nil, ErrTokenInvalid
+	}
+
+	return claims, nil
 }

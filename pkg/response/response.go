@@ -2,33 +2,37 @@ package response
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Response 统一响应结构
 type Response struct {
-	Code    int         `json:"code"`            // 状态码
-	Message string      `json:"message"`         // 消息
-	Data    interface{} `json:"data"`            // 数据
-	Error   string      `json:"error,omitempty"` // 错误信息，仅在出错时返回
+	Code       int         `json:"code"`                 // 状态码
+	Message    string      `json:"message"`              // 消息
+	Data       interface{} `json:"data"`                 // 数据
+	Error      string      `json:"error,omitempty"`      // 错误信息，仅在出错时返回
+	Timestamp  int64       `json:"timestamp,omitempty"`  // 响应时间戳
 }
 
 // Success 成功响应
 func Success(c *gin.Context, message string, data interface{}) {
 	c.JSON(http.StatusOK, Response{
-		Code:    http.StatusOK,
-		Message: message,
-		Data:    data,
+		Code:      http.StatusOK,
+		Message:   message,
+		Data:      data,
+		Timestamp: time.Now().Unix(),
 	})
 }
 
 // Fail 失败响应
 func Fail(c *gin.Context, statusCode int, message string, err error) {
 	response := Response{
-		Code:    statusCode,
-		Message: message,
-		Data:    nil,
+		Code:      statusCode,
+		Message:   message,
+		Data:      nil,
+		Timestamp: time.Now().Unix(),
 	}
 
 	// 如果有错误信息，则添加到响应中

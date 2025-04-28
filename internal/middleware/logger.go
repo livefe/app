@@ -131,22 +131,40 @@ func isJSON(data []byte) bool {
 	return json.Valid(data) && (data[0] == '{' || data[0] == '[')
 }
 
+// sensitiveFieldMap 敏感字段映射，用于快速查找
+var sensitiveFieldMap = map[string]bool{
+	"password":      true,
+	"token":         true,
+	"secret":        true,
+	"authorization": true,
+	"auth":          true,
+	"key":           true,
+}
+
 // sanitizeJSON 处理JSON中的敏感字段
 func sanitizeJSON(data map[string]interface{}) {
-	sensitiveFields := []string{"password", "token", "secret", "authorization", "auth", "key"}
-
 	for k, v := range data {
-		// 检查是否为敏感字段
-		for _, field := range sensitiveFields {
-			if strings.Contains(strings.ToLower(k), field) {
-				data[k] = "[REDACTED]"
+		// 转换为小写进行检查
+		lowerKey := strings.ToLower(k)
+
+		// 检查是否为敏感字段或包含敏感字段
+		isSensitive := false
+		for field := range sensitiveFieldMap {
+			if strings.Contains(lowerKey, field) {
+				isSensitive = true
 				break
 			}
+		}
+
+		if isSensitive {
+			data[k] = "[REDACTED]"
+			continue
 		}
 
 		// 递归处理嵌套的map
 		if nestedMap, ok := v.(map[string]interface{}); ok {
 			sanitizeJSON(nestedMap)
+			continue
 		}
 
 		// 处理数组中的map

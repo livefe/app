@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -52,13 +53,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			var statusCode int
 			var errorMsg string
 
-			switch err {
-			case jwt.ErrTokenExpired:
+			switch {
+			case errors.Is(err, jwt.ErrTokenExpired):
 				statusCode = http.StatusUnauthorized
 				errorMsg = "令牌已过期"
-			case jwt.ErrTokenInvalid:
+			case errors.Is(err, jwt.ErrTokenInvalid):
 				statusCode = http.StatusUnauthorized
 				errorMsg = "无效的令牌"
+			case errors.Is(err, jwt.ErrTokenNotProvided):
+				statusCode = http.StatusUnauthorized
+				errorMsg = "未提供授权令牌"
 			default:
 				statusCode = http.StatusInternalServerError
 				errorMsg = "验证令牌时发生错误"
@@ -72,6 +76,10 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 将用户信息存储在上下文中
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
+		// 添加令牌ID到上下文，便于后续操作（如注销）
+		if claims.ID != "" {
+			c.Set("tokenID", claims.ID)
+		}
 
 		c.Next()
 	}

@@ -157,26 +157,53 @@ func CloseGormDB() error {
 }
 
 // CheckGormDBHealth 检查GORM数据库健康状态
-func CheckGormDBHealth() error {
+func CheckGormDBHealth() (map[string]interface{}, error) {
 	// 检查数据库是否已初始化
 	if GormDB == nil {
-		return fmt.Errorf("GORM数据库未初始化")
+		return nil, fmt.Errorf("GORM数据库未初始化")
 	}
 
 	// 获取底层SQL DB连接
 	sqlDB, err := GormDB.DB()
 	if err != nil {
-		return fmt.Errorf("获取GORM底层SQL DB连接失败: %w", err)
+		return nil, fmt.Errorf("获取GORM底层SQL DB连接失败: %w", err)
 	}
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		// 数据库健康检查失败
-		return fmt.Errorf("GORM数据库健康检查失败: %w", err)
+		return nil, fmt.Errorf("GORM数据库健康检查失败: %w", err)
 	}
 
-	// 检查连接池状态
-	_ = sqlDB.Stats() // 仅检查状态，不记录日志
+	// 获取并返回连接池状态
+	return GetDBStats()
+}
 
-	return nil
+// GetDBStats 获取数据库连接池统计信息
+func GetDBStats() (map[string]interface{}, error) {
+	// 检查数据库是否已初始化
+	if GormDB == nil {
+		return nil, fmt.Errorf("GORM数据库未初始化")
+	}
+
+	// 获取底层SQL DB连接
+	sqlDB, err := GormDB.DB()
+	if err != nil {
+		return nil, fmt.Errorf("获取GORM底层SQL DB连接失败: %w", err)
+	}
+
+	// 获取连接池统计信息
+	stats := sqlDB.Stats()
+
+	// 转换为map以便于序列化
+	return map[string]interface{}{
+		"max_open_connections": stats.MaxOpenConnections,
+		"open_connections":     stats.OpenConnections,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
+		"max_lifetime_closed":  stats.MaxLifetimeClosed,
+	}, nil
 }
