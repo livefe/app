@@ -144,12 +144,44 @@ func Init() error {
 	)
 
 	// 创建日志记录器
-	logger = zap.New(
-		core,
+	options := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1),
-		zap.AddStacktrace(zapcore.ErrorLevel),
-	)
+	}
+
+	// 配置调用栈
+	// 解析调用栈级别
+	var stacktraceLevel zapcore.Level
+	switch strings.ToLower(cfg.StacktraceLevel) {
+	case DebugLevel:
+		stacktraceLevel = zapcore.DebugLevel
+	case InfoLevel:
+		stacktraceLevel = zapcore.InfoLevel
+	case WarnLevel:
+		stacktraceLevel = zapcore.WarnLevel
+	case ErrorLevel:
+		stacktraceLevel = zapcore.ErrorLevel
+	case FatalLevel:
+		stacktraceLevel = zapcore.FatalLevel
+	default:
+		stacktraceLevel = zapcore.ErrorLevel
+	}
+
+	// 根据配置决定是否启用调用栈
+	if cfg.EnableStacktrace {
+		// 添加调用栈选项
+		options = append(options, zap.AddStacktrace(stacktraceLevel))
+
+		// 设置调用栈深度（如果配置了）
+		if cfg.StacktraceDepth > 0 {
+			// Zap没有直接设置调用栈深度的选项
+			// 但可以通过Development模式获取更详细的调用栈信息
+			options = append(options, zap.Development())
+		}
+	}
+
+	// 创建日志记录器
+	logger = zap.New(core, options...)
 
 	// 创建SugaredLogger
 	SugaredLogger = logger.Sugar()
@@ -187,6 +219,16 @@ func applyDefaultConfig(cfg *config.LoggerConfig) {
 	// 默认日志文件备份数量
 	if cfg.MaxBackups <= 0 {
 		cfg.MaxBackups = 10
+	}
+
+	// 默认调用栈级别
+	if cfg.StacktraceLevel == "" {
+		cfg.StacktraceLevel = ErrorLevel
+	}
+
+	// 默认调用栈深度
+	if cfg.StacktraceDepth <= 0 {
+		cfg.StacktraceDepth = 10
 	}
 }
 

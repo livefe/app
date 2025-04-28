@@ -57,14 +57,17 @@ type JWTConfig struct {
 
 // LoggerConfig 日志配置
 type LoggerConfig struct {
-	Level      string `mapstructure:"level"`
-	Format     string `mapstructure:"format"`
-	OutputPath string `mapstructure:"output_path"`
-	MaxSize    int    `mapstructure:"max_size"`
-	MaxAge     int    `mapstructure:"max_age"`
-	MaxBackups int    `mapstructure:"max_backups"`
-	Compress   bool   `mapstructure:"compress"`
-	Console    bool   `mapstructure:"console"` // 是否同时输出到控制台
+	Level            string `mapstructure:"level"`
+	Format           string `mapstructure:"format"`
+	OutputPath       string `mapstructure:"output_path"`
+	MaxSize          int    `mapstructure:"max_size"`
+	MaxAge           int    `mapstructure:"max_age"`
+	MaxBackups       int    `mapstructure:"max_backups"`
+	Compress         bool   `mapstructure:"compress"`
+	Console          bool   `mapstructure:"console"`           // 是否同时输出到控制台
+	EnableStacktrace bool   `mapstructure:"enable_stacktrace"` // 是否启用调用栈
+	StacktraceLevel  string `mapstructure:"stacktrace_level"`  // 记录调用栈的最低日志级别
+	StacktraceDepth  int    `mapstructure:"stacktrace_depth"`  // 调用栈深度
 }
 
 // SMSConfig 短信服务配置

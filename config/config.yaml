@@ -35,6 +35,9 @@ logger:  # 日志配置
   max_backups: 3  # 最大保留日志文件数量
   compress: false  # 是否压缩日志文件
   console: false  # 同时输出到控制台
+  enable_stacktrace: true  # 是否启用调用栈
+  stacktrace_level: "error"  # 记录调用栈的最低日志级别: debug, info, warn, error, fatal
+  stacktrace_depth: 10  # 调用栈深度
 
 sms:  # 短信服务配置
   aliyun:  # 阿里云短信服务配置
