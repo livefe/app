@@ -89,11 +89,11 @@ func Logger() gin.HandlerFunc {
 		// 根据状态码选择日志级别
 		statusCode := c.Writer.Status()
 		if statusCode >= http.StatusInternalServerError {
-			logger.Error(c, "HTTP请求处理失败", responseFields...)
+			logger.Error(c, "完成HTTP请求 - 失败", responseFields...)
 		} else if statusCode >= http.StatusBadRequest {
-			logger.Warn(c, "HTTP请求处理警告", responseFields...)
+			logger.Warn(c, "完成HTTP请求 - 警告", responseFields...)
 		} else {
-			logger.Info(c, "HTTP请求处理成功", responseFields...)
+			logger.Info(c, "完成HTTP请求 - 成功", responseFields...)
 		}
 	}
 }
