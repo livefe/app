@@ -4,19 +4,15 @@ import (
 	"crypto/rand"
 	mathrand "math/rand"
 	"time"
-
 )
 
 // GenerateRandomDigits 生成指定长度的随机数字字符串
-// 使用crypto/rand生成安全随机数，如果失败则回退到math/rand
 func GenerateRandomDigits(length int) string {
 	const digits = "0123456789"
 	return GenerateRandomString(length, digits)
 }
 
-// GenerateRandomString 生成指定长度的随机字符串
-// 从给定的字符集中随机选择字符
-// 使用crypto/rand生成安全随机数，如果失败则回退到math/rand
+// GenerateRandomString 生成指定长度的随机字符串，使用安全随机数生成器，失败时回退到math/rand
 func GenerateRandomString(length int, charset string) string {
 	result := make([]byte, length)
 

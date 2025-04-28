@@ -16,10 +16,9 @@ import (
 // TokenBlacklistPrefix 令牌黑名单前缀
 const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
 
-// AuthMiddleware 创建JWT认证中间件
+// AuthMiddleware 创建JWT认证中间件，验证请求中的令牌并提取用户信息
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从请求头获取令牌
 		authHeader := c.GetHeader(constant.AuthHeaderName)
 		if authHeader == "" {
 			response.Unauthorized(c, "未提供授权令牌", jwt.ErrTokenNotProvided)
@@ -27,7 +26,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 提取令牌
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == constant.AuthHeaderPrefix) {
 			response.Unauthorized(c, "无效的授权格式", nil)
@@ -37,17 +35,14 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := parts[1]
 
-		// 检查令牌是否在黑名单中
 		blacklistKey := TokenBlacklistPrefix + tokenString
 		_, err := redis.Get(blacklistKey)
 		if err == nil {
-			// 令牌在黑名单中，拒绝访问
 			response.Unauthorized(c, "令牌已失效，请重新登录", nil)
 			c.Abort()
 			return
 		}
 
-		// 解析令牌
 		claims, err := jwt.ParseToken(tokenString)
 		if err != nil {
 			var statusCode int
@@ -73,10 +68,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 将用户信息存储在上下文中
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
-		// 添加令牌ID到上下文，便于后续操作（如注销）
 		if claims.ID != "" {
 			c.Set("tokenID", claims.ID)
 		}
@@ -85,7 +78,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// GetUserIDFromContext 从上下文中获取用户ID
+// GetUserIDFromContext 从上下文中获取用户ID，返回ID值和是否存在
 func GetUserIDFromContext(c *gin.Context) (uint, bool) {
 	userID, exists := c.Get("userID")
 	if !exists {

@@ -11,16 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserHandler 用户处理器
+// UserHandler 用户处理器，负责处理用户相关的HTTP请求
 type UserHandler struct {
 	userService service.UserService
 }
 
-// NewUserHandler 创建用户处理器
+// NewUserHandler 创建用户处理器实例
 func NewUserHandler(userService service.UserService) *UserHandler {
-	return &UserHandler{
-		userService: userService,
-	}
+	return &UserHandler{userService: userService}
 }
 
 // SendVerificationCode 发送验证码
@@ -41,9 +39,8 @@ func (h *UserHandler) SendVerificationCode(c *gin.Context) {
 	response.Success(c, resp.Message, nil)
 }
 
-// GetUserInfo 获取用户信息
+// GetUserInfo 获取用户信息，仅允许用户查看自己的信息
 func (h *UserHandler) GetUserInfo(c *gin.Context) {
-	// 获取用户ID参数
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
@@ -51,23 +48,19 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 		return
 	}
 
-	// 从上下文中获取当前用户ID
 	currentUserID, exists := c.Get("userID")
 	if !exists {
 		response.Unauthorized(c, "未授权访问", nil)
 		return
 	}
 
-	// 权限检查：用户只能查看自己的信息
 	if currentUserID.(uint) != uint(id) {
 		response.Forbidden(c, "权限不足，无法查看其他用户信息", nil)
 		return
 	}
 
-	// 调用服务获取用户信息，传递Gin上下文
 	resp, err := h.userService.GetUserInfo(c, uint(id))
 	if err != nil {
-		// 根据错误类型设置不同的状态码和错误消息
 		if err == service.ErrUserNotFound {
 			response.NotFound(c, "用户不存在", err)
 		} else {

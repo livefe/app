@@ -1,10 +1,8 @@
 package sms
 
-// SMSProvider 短信服务提供商接口
-// 所有短信服务提供商都需要实现这个接口
+// SMSProvider 短信服务提供商接口，所有短信服务提供商都需要实现此接口
 type SMSProvider interface {
-	// SendSMS 发送短信
-	// 参数为通用的短信请求，返回通用的短信响应
+	// SendSMS 发送短信，接收通用请求参数，返回通用响应
 	SendSMS(request SMSRequest) (*SMSResponse, error)
 }
 
@@ -25,8 +23,7 @@ type SMSResponse struct {
 	RecommendInfo string // 错误时的诊断信息
 }
 
-// SMSClient 短信客户端
-// 用于获取短信服务提供商实例并发送短信
+// SMSClient 短信客户端，用于发送短信的统一接口
 type SMSClient struct {
 	provider SMSProvider
 }
@@ -45,15 +42,11 @@ func (c *SMSClient) SendSMS(request SMSRequest) (*SMSResponse, error) {
 	return c.provider.SendSMS(request)
 }
 
-// GetSMSClient 获取短信客户端
-// 目前默认使用阿里云短信服务，未来可以根据配置动态选择不同的短信服务提供商
+// GetSMSClient 获取短信客户端，默认使用阿里云短信服务
 func GetSMSClient() (*SMSClient, error) {
-	// 创建阿里云短信服务提供商实例
 	provider, err := NewAliyunSMSProvider()
 	if err != nil {
 		return nil, err
 	}
-
-	// 创建短信客户端
 	return NewSMSClient(provider), nil
 }

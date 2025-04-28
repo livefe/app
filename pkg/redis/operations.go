@@ -27,28 +27,26 @@ func getContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), defaultTimeout)
 }
 
-// 执行带重试的Redis操作
+// executeWithRetry 执行带重试的Redis操作，最多重试3次
 func executeWithRetry(operation func() error) error {
 	var err error
-	for i := 0; i < 3; i++ { // 最多重试3次
+	for i := 0; i < 3; i++ {
 		err = operation()
 		if err == nil || err == redis.Nil || err == ErrKeyNotFound {
-			return err // 成功或特定错误直接返回
+			return err
 		}
 
-		// 判断是否为连接错误，如果是则重试
 		if isConnectionError(err) {
-			time.Sleep(time.Duration(i*100) * time.Millisecond) // 退避策略
+			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 
-		// 其他错误直接返回
 		return err
 	}
 	return err
 }
 
-// 判断是否为连接错误
+// isConnectionError 判断是否为网络连接相关错误
 func isConnectionError(err error) bool {
 	errStr := err.Error()
 	return strings.Contains(errStr, "connection") ||
@@ -59,7 +57,7 @@ func isConnectionError(err error) bool {
 
 // ======== 字符串操作 ========
 
-// Set 设置键值对
+// Set 设置键值对并指定过期时间
 func Set(key string, value interface{}, expiration time.Duration) error {
 	return executeWithRetry(func() error {
 		ctx, cancel := getContext()

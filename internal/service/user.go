@@ -60,26 +60,19 @@ func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRe
 
 // SendVerificationCode 发送验证码
 func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) {
-	// 记录开始处理请求的日志
 	logger.Info(ctx, "开始处理发送验证码请求",
 		logger.String("mobile", req.Mobile),
 		logger.String("type", string(req.Type)))
 
-	// 生成随机验证码
 	code := generateVerificationCode(constant.VerificationCodeLength)
 
-	// 根据验证码类型选择不同的前缀
-	var prefix string
-	switch req.Type {
-	case dto.VerificationTypeLogin:
-		prefix = constant.VerificationCodePrefixLogin
-	case dto.VerificationTypeDeactivate:
+	// 确定验证码类型前缀
+	prefix := constant.VerificationCodePrefixLogin
+	if req.Type == dto.VerificationTypeDeactivate {
 		prefix = constant.VerificationCodePrefixDeactivate
-	default:
-		prefix = constant.VerificationCodePrefixLogin
 	}
 
-	// 将验证码保存到Redis，设置过期时间
+	// 保存验证码到Redis
 	key := prefix + req.Mobile
 	err := redis.Set(key, code, constant.VerificationCodeExpiration)
 	if err != nil {
@@ -90,27 +83,22 @@ func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVer
 		return nil, fmt.Errorf("保存验证码失败: %w", err)
 	}
 
-	// 发送短信验证码
+	// 获取短信客户端
 	client, err := sms.GetSMSClient()
 	if err != nil {
-		logger.Error(ctx, "创建短信客户端失败",
-			logger.String("mobile", req.Mobile),
-			logger.String("type", string(req.Type)),
-			logger.Err(err))
+		logger.Error(ctx, "创建短信客户端失败", logger.String("mobile", req.Mobile), logger.Err(err))
 		return nil, fmt.Errorf("创建短信客户端失败: %w", err)
 	}
 
-	// 从配置中获取验证码短信模板代码
+	// 获取短信模板
 	smsConfig := config.GetSMSConfig()
 	templateCode := smsConfig.Aliyun.Templates["verification_code"]
 	if templateCode == "" {
-		logger.Error(ctx, "短信模板配置错误",
-			logger.String("mobile", req.Mobile),
-			logger.String("type", string(req.Type)))
-		return nil, fmt.Errorf("短信模板配置错误: %w", err)
+		logger.Error(ctx, "短信模板配置错误", logger.String("mobile", req.Mobile))
+		return nil, fmt.Errorf("短信模板配置错误")
 	}
 
-	// 根据验证码类型构建不同的短信内容
+	// 构建短信内容
 	var smsContent string
 	switch req.Type {
 	case dto.VerificationTypeLogin:
@@ -121,22 +109,16 @@ func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVer
 		smsContent = fmt.Sprintf("您的验证码是：%s，5分钟内有效。", code)
 	}
 
-	// 构建短信请求
+	// 发送短信
 	smsReq := sms.SMSRequest{
-		PhoneNumbers: req.Mobile,
-		TemplateCode: templateCode,
-		TemplateParam: map[string]string{
-			"code": code,
-		},
+		PhoneNumbers:  req.Mobile,
+		TemplateCode:  templateCode,
+		TemplateParam: map[string]string{"code": code},
 	}
 
-	// 发送短信
 	smsResp, err := client.SendSMS(smsReq)
 	if err != nil {
-		logger.Error(ctx, "发送短信失败",
-			logger.String("mobile", req.Mobile),
-			logger.String("type", string(req.Type)),
-			logger.Err(err))
+		logger.Error(ctx, "发送短信失败", logger.String("mobile", req.Mobile), logger.Err(err))
 		return nil, fmt.Errorf("发送短信失败: %w", err)
 	}
 
@@ -151,17 +133,10 @@ func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVer
 		RequestId:     smsResp.RequestId,
 		BizId:         smsResp.BizId,
 	}
-
-	// 保存短信记录
 	_ = s.smsRepo.Create(smsRecord)
 
-	logger.Info(ctx, "验证码发送成功",
-		logger.String("mobile", req.Mobile),
-		logger.String("type", string(req.Type)))
-
-	return &dto.SendVerificationCodeResponse{
-		Message: "验证码已发送",
-	}, nil
+	logger.Info(ctx, "验证码发送成功", logger.String("mobile", req.Mobile))
+	return &dto.SendVerificationCodeResponse{Message: "验证码已发送"}, nil
 }
 
 // VerificationCodeLogin 验证码登录

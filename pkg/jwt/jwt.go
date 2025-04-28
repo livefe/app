@@ -12,50 +12,44 @@ import (
 	"github.com/google/uuid"
 )
 
-// 定义错误类型
+// JWT错误类型定义
 var (
 	ErrTokenExpired     = errors.New(constant.ErrTokenExpired)
 	ErrTokenInvalid     = errors.New(constant.ErrTokenInvalid)
 	ErrTokenNotProvided = errors.New(constant.ErrTokenNotProvided)
 )
 
-// CustomClaims 自定义JWT声明结构体
+// CustomClaims 自定义JWT声明结构体，包含用户信息和标准声明
 type CustomClaims struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken 生成JWT令牌
+// GenerateToken 生成JWT令牌，包含用户ID和用户名信息
 func GenerateToken(userID uint, username string, _ string) (string, error) {
 	jwtConfig := config.GetJWTConfig()
 
-	// 解析过期时间
 	expDuration, err := time.ParseDuration(jwtConfig.ExpiresTime)
 	if err != nil {
 		return "", fmt.Errorf("解析过期时间失败: %w", err)
 	}
 
-	// 获取当前时间
 	now := time.Now()
-	
-	// 创建自定义声明
+
 	claims := CustomClaims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(expDuration)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),         // 添加NotBefore声明
+			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    jwtConfig.Issuer,
-			ID:        uuid.New().String(),             // 添加唯一ID
+			ID:        uuid.New().String(),
 		},
 	}
 
-	// 创建令牌
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// 签名令牌
 	tokenString, err := token.SignedString([]byte(jwtConfig.SecretKey))
 	if err != nil {
 		return "", fmt.Errorf("签名令牌失败: %w", err)
@@ -118,7 +112,7 @@ func RefreshToken(tokenString string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("无法解析原令牌: %w", err)
 	}
-	
+
 	// 检查令牌是否已过期太久（超过7天不允许刷新）
 	if claims.ExpiresAt != nil {
 		expTime := claims.ExpiresAt.Time
@@ -131,7 +125,7 @@ func RefreshToken(tokenString string) (string, error) {
 	return GenerateToken(claims.UserID, claims.Username, "")
 }
 
-// parseTokenWithoutValidation 解析JWT令牌但不验证过期时间
+// parseTokenWithoutValidation 解析JWT令牌但不验证过期时间，用于令牌刷新
 func parseTokenWithoutValidation(tokenString string) (*CustomClaims, error) {
 	if tokenString == "" {
 		return nil, ErrTokenNotProvided
@@ -139,9 +133,7 @@ func parseTokenWithoutValidation(tokenString string) (*CustomClaims, error) {
 
 	jwtConfig := config.GetJWTConfig()
 
-	// 解析令牌但不验证过期时间
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		// 验证签名算法
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("意外的签名方法: %v", token.Header["alg"])
 		}
@@ -155,7 +147,6 @@ func parseTokenWithoutValidation(tokenString string) (*CustomClaims, error) {
 		return nil, fmt.Errorf("解析令牌失败: %w", err)
 	}
 
-	// 提取声明
 	claims, ok := token.Claims.(*CustomClaims)
 	if !ok {
 		return nil, ErrTokenInvalid
