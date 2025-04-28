@@ -251,23 +251,30 @@ func Close() error {
 // WithContext 从上下文中获取请求ID和用户ID，并添加到日志字段中
 func WithContext(ctx context.Context) *zap.Logger {
 	if ctx == nil {
-		return logger
+		return logger.With(
+			String("request_id", ""),
+			String("user_id", ""),
+		)
 	}
 
 	// 构建基础日志字段
 	fields := []zap.Field{}
 
-	// 添加请求ID（如果存在）
+	// 添加请求ID（始终添加，如果不存在则为空字符串）
+	requestID := ""
 	if id, ok := ctx.Value(RequestIDKey).(string); ok && id != "" {
-		fields = append(fields, String("request_id", id))
+		requestID = id
 	}
+	fields = append(fields, String("request_id", requestID))
 
-	// 添加用户ID（如果存在）
+	// 添加用户ID（始终添加，如果不存在则为空字符串）
+	userID := ""
 	if id, ok := ctx.Value(UserIDKey).(string); ok && id != "" {
-		fields = append(fields, String("user_id", id))
+		userID = id
 	} else if id, ok := ctx.Value(UserIDKey).(uint); ok && id > 0 {
-		fields = append(fields, String("user_id", fmt.Sprintf("%d", id)))
+		userID = fmt.Sprintf("%d", id)
 	}
+	fields = append(fields, String("user_id", userID))
 
 	// 返回带有字段的日志记录器
 	return logger.With(fields...)
