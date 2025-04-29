@@ -37,6 +37,10 @@ func main() {
 	models := []interface{}{
 		&model.User{},
 		&model.SMSRecord{},
+		&model.SocialRelation{},
+		&model.SocialLocationShare{},
+		&model.SocialPost{},
+		&model.SocialComment{},
 		// 在此处添加其他模型
 	}
 

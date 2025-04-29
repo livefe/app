@@ -1,26 +1,18 @@
 package routes
 
 import (
+	"app/internal/container"
 	"app/internal/handler"
 	"app/internal/middleware"
-	"app/internal/repository"
-	"app/internal/service"
-	"app/pkg/database"
 
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterUserRoutes 注册用户相关路由
 func RegisterUserRoutes(r *gin.Engine) {
-	// 获取数据库连接
-	db := database.GetGormDB()
-
-	// 初始化仓库层
-	userRepo := repository.NewUserRepository(db)
-	smsRepo := repository.NewSMSRepository(db)
-
-	// 初始化服务层
-	userService := service.NewUserService(userRepo, smsRepo)
+	// 从容器获取用户服务
+	container := container.GetInstance()
+	userService := container.GetUserService()
 
 	// 初始化处理器
 	userHandler := handler.NewUserHandler(userService)

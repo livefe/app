@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"app/internal/container"
 	"app/internal/middleware"
 	"app/pkg/response"
 
@@ -12,11 +13,17 @@ func SetupRouter(r *gin.Engine) *gin.Engine {
 	// 应用全局中间件
 	r.Use(middleware.Logger())
 
+	// 预初始化容器（确保所有依赖项都已准备好）
+	_ = container.GetInstance()
+
 	// 健康检查路由
 	r.GET("/health", HealthCheck)
 
 	// 注册用户路由
 	RegisterUserRoutes(r)
+
+	// 注册社交路由
+	RegisterSocialRoutes(r)
 
 	return r
 }
