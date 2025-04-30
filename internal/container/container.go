@@ -14,20 +14,9 @@ type Container struct {
 	// 数据库连接实例
 	db *gorm.DB
 
-	// 仓库层实例
-	userRepository           repository.UserRepository
-	smsRepository            repository.SMSRepository
-	socialRelationRepository repository.SocialRelationRepository
-	socialPostRepository     repository.SocialPostRepository
-	socialCommentRepository  repository.SocialCommentRepository
-	socialLocationRepository repository.SocialLocationShareRepository
-
-	// 服务层实例
-	userService   service.UserService
-	socialService service.SocialService
-
-	// 确保单例模式的互斥锁
-	mutex sync.Mutex
+	// 使用sync.Map替代互斥锁和字段，提高并发安全性
+	repositories sync.Map
+	services     sync.Map
 }
 
 // 全局容器实例
@@ -44,106 +33,110 @@ func GetInstance() *Container {
 	return instance
 }
 
+// 通用的获取或创建仓库实例的方法
+func (c *Container) getOrCreateRepository(key string, creator func() interface{}) interface{} {
+	if value, ok := c.repositories.Load(key); ok {
+		return value
+	}
+
+	// 创建新实例
+	repo := creator()
+
+	// 使用LoadOrStore确保并发安全，即使有多个goroutine同时调用
+	actual, _ := c.repositories.LoadOrStore(key, repo)
+	return actual
+}
+
+// 通用的获取或创建服务实例的方法
+func (c *Container) getOrCreateService(key string, creator func() interface{}) interface{} {
+	if value, ok := c.services.Load(key); ok {
+		return value
+	}
+
+	// 创建新实例
+	svc := creator()
+
+	// 使用LoadOrStore确保并发安全，即使有多个goroutine同时调用
+	actual, _ := c.services.LoadOrStore(key, svc)
+	return actual
+}
+
 // GetUserRepository 获取用户仓库实例（懒加载）
 func (c *Container) GetUserRepository() repository.UserRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.userRepository == nil {
-		c.userRepository = repository.NewUserRepository(c.db)
-	}
-	return c.userRepository
+	repo := c.getOrCreateRepository("user_repository", func() interface{} {
+		return repository.NewUserRepository(c.db)
+	})
+	return repo.(repository.UserRepository)
 }
 
 // GetSMSRepository 获取短信仓库实例（懒加载）
 func (c *Container) GetSMSRepository() repository.SMSRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.smsRepository == nil {
-		c.smsRepository = repository.NewSMSRepository(c.db)
-	}
-	return c.smsRepository
+	repo := c.getOrCreateRepository("sms_repository", func() interface{} {
+		return repository.NewSMSRepository(c.db)
+	})
+	return repo.(repository.SMSRepository)
 }
 
 // GetSocialRelationRepository 获取社交关系仓库实例（懒加载）
 func (c *Container) GetSocialRelationRepository() repository.SocialRelationRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.socialRelationRepository == nil {
-		c.socialRelationRepository = repository.NewSocialRelationRepository(c.db)
-	}
-	return c.socialRelationRepository
+	repo := c.getOrCreateRepository("social_relation_repository", func() interface{} {
+		return repository.NewSocialRelationRepository(c.db)
+	})
+	return repo.(repository.SocialRelationRepository)
 }
 
 // GetSocialPostRepository 获取社交动态仓库实例（懒加载）
 func (c *Container) GetSocialPostRepository() repository.SocialPostRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.socialPostRepository == nil {
-		c.socialPostRepository = repository.NewSocialPostRepository(c.db)
-	}
-	return c.socialPostRepository
+	repo := c.getOrCreateRepository("social_post_repository", func() interface{} {
+		return repository.NewSocialPostRepository(c.db)
+	})
+	return repo.(repository.SocialPostRepository)
 }
 
 // GetSocialCommentRepository 获取社交评论仓库实例（懒加载）
 func (c *Container) GetSocialCommentRepository() repository.SocialCommentRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.socialCommentRepository == nil {
-		c.socialCommentRepository = repository.NewSocialCommentRepository(c.db)
-	}
-	return c.socialCommentRepository
+	repo := c.getOrCreateRepository("social_comment_repository", func() interface{} {
+		return repository.NewSocialCommentRepository(c.db)
+	})
+	return repo.(repository.SocialCommentRepository)
 }
 
 // GetSocialLocationShareRepository 获取位置分享仓库实例（懒加载）
 func (c *Container) GetSocialLocationShareRepository() repository.SocialLocationShareRepository {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.socialLocationRepository == nil {
-		c.socialLocationRepository = repository.NewSocialLocationShareRepository(c.db)
-	}
-	return c.socialLocationRepository
+	repo := c.getOrCreateRepository("social_location_repository", func() interface{} {
+		return repository.NewSocialLocationShareRepository(c.db)
+	})
+	return repo.(repository.SocialLocationShareRepository)
 }
 
 // GetUserService 获取用户服务实例（懒加载）
 func (c *Container) GetUserService() service.UserService {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.userService == nil {
+	svc := c.getOrCreateService("user_service", func() interface{} {
+		// 先获取依赖的仓库
 		userRepo := c.GetUserRepository()
 		smsRepo := c.GetSMSRepository()
-		c.userService = service.NewUserService(userRepo, smsRepo)
-	}
-	return c.userService
+		return service.NewUserService(userRepo, smsRepo)
+	})
+	return svc.(service.UserService)
 }
 
 // GetSocialService 获取社交服务实例（懒加载）
 func (c *Container) GetSocialService() service.SocialService {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	if c.socialService == nil {
-		// 使用新的社交服务实现，直接注入各个子仓库
+	svc := c.getOrCreateService("social_service", func() interface{} {
+		// 先获取依赖的仓库
 		userRepo := c.GetUserRepository()
 		relationRepo := c.GetSocialRelationRepository()
 		locationRepo := c.GetSocialLocationShareRepository()
 		postRepo := c.GetSocialPostRepository()
 		commentRepo := c.GetSocialCommentRepository()
 
-		// 使用正确的构造函数创建社交服务实例
-		c.socialService = service.NewSocialService(
+		return service.NewSocialService(
 			relationRepo,
 			locationRepo,
 			postRepo,
 			commentRepo,
 			userRepo,
 		)
-	}
-	return c.socialService
+	})
+	return svc.(service.SocialService)
 }
