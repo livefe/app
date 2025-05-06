@@ -18,7 +18,7 @@ import (
 // 定义上下文键
 const (
 	RequestIDKey = "request_id"
-	UserIDKey    = "user_id"
+	UserIDKey    = "userID"
 )
 
 // 定义日志级别
@@ -253,7 +253,7 @@ func WithContext(ctx context.Context) *zap.Logger {
 	if ctx == nil {
 		return logger.With(
 			String("request_id", ""),
-			String("user_id", ""),
+			String("userID", ""),
 		)
 	}
 
@@ -274,7 +274,7 @@ func WithContext(ctx context.Context) *zap.Logger {
 	} else if id, ok := ctx.Value(UserIDKey).(uint); ok && id > 0 {
 		userID = fmt.Sprintf("%d", id)
 	}
-	fields = append(fields, String("user_id", userID))
+	fields = append(fields, String("userID", userID))
 
 	// 返回带有字段的日志记录器
 	return logger.With(fields...)
