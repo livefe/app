@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// SocialComment 社交评论模型
+// PostComment 动态评论模型
 // 存储用户对动态的评论
-type SocialComment struct {
+type PostComment struct {
 	ID        uint           `gorm:"primaryKey;comment:评论ID，主键" json:"id"`
 	PostID    uint           `gorm:"index:idx_post_comment,priority:1;comment:动态ID" json:"post_id"`
 	UserID    uint           `gorm:"index;comment:评论用户ID" json:"user_id"`

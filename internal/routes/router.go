@@ -22,8 +22,11 @@ func SetupRouter(r *gin.Engine) *gin.Engine {
 	// 注册用户路由
 	RegisterUserRoutes(r)
 
-	// 注册社交路由
-	RegisterSocialRoutes(r)
+	// 注册动态路由
+	RegisterPostRoutes(r)
+
+	// 注册社交关系相关路由
+	RegisterRelationRoutes(r)
 
 	return r
 }

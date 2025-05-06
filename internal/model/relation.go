@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// SocialRelation 社交关系模型
-// 存储用户之间的社交关系，如关注、好友等
-type SocialRelation struct {
+// Relation 关系模型
+// 存储用户之间的关系，如关注、好友等
+type Relation struct {
 	ID        uint           `gorm:"primaryKey;comment:关系ID，主键" json:"id"`
 	UserID    uint           `gorm:"index:idx_user_relation,priority:1;index:idx_user_target,priority:1,uniqueIndex;comment:用户ID，关系发起者" json:"user_id"`
 	TargetID  uint           `gorm:"index:idx_user_relation,priority:2;index:idx_user_target,priority:2,uniqueIndex;comment:目标用户ID，关系接收者" json:"target_id"`
