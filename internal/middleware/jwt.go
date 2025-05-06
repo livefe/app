@@ -13,9 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TokenBlacklistPrefix 令牌黑名单前缀
-const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
-
 // AuthMiddleware 创建JWT认证中间件，验证请求中的令牌并提取用户信息
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -35,7 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := parts[1]
 
-		blacklistKey := TokenBlacklistPrefix + tokenString
+		blacklistKey := constant.TokenBlacklistPrefix + tokenString
 		_, err := redis.Get(blacklistKey)
 		if err == nil {
 			response.Unauthorized(c, "令牌已失效，请重新登录", nil)
@@ -76,24 +73,4 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// GetUserIDFromContext 从上下文中获取用户ID，返回ID值和是否存在
-func GetUserIDFromContext(c *gin.Context) (uint, bool) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		return 0, false
-	}
-	id, ok := userID.(uint)
-	return id, ok
-}
-
-// GetUsernameFromContext 从上下文中获取用户名
-func GetUsernameFromContext(c *gin.Context) (string, bool) {
-	username, exists := c.Get("username")
-	if !exists {
-		return "", false
-	}
-	name, ok := username.(string)
-	return name, ok
 }
