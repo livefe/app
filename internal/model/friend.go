@@ -1,0 +1,26 @@
+package model
+
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// Friend 好友关系模型
+// 存储用户之间的好友关系
+type Friend struct {
+	// 基本标识信息
+	ID uint `gorm:"primaryKey;comment:好友关系ID，主键" json:"id"`
+
+	// 关系信息
+	UserID   uint `gorm:"index:idx_user_friend,priority:1;index:idx_user_target_friend,priority:1,uniqueIndex;comment:用户ID，好友关系发起者" json:"user_id"`
+	TargetID uint `gorm:"index:idx_user_friend,priority:2;index:idx_user_target_friend,priority:2,uniqueIndex;comment:目标用户ID，好友关系接收者" json:"target_id"`
+
+	// 状态信息
+	Status int `gorm:"type:smallint;default:0;comment:好友状态：0-待确认，1-已确认" json:"status"`
+
+	// 时间信息
+	CreatedAt time.Time      `gorm:"type:datetime;comment:创建时间" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"type:datetime;comment:更新时间" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"type:datetime;comment:删除时间，软删除" json:"-"`
+}

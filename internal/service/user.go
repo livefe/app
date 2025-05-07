@@ -32,16 +32,21 @@ const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
 
 // UserService 用户服务接口
 type UserService interface {
+	// 查询方法
+	// GetUserInfo 获取用户信息
+	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
+
+	// 认证方法
 	// SendVerificationCode 发送验证码
 	SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error)
 	// VerificationCodeLogin 验证码登录
 	VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)
-	// GetUserInfo 获取用户信息
-	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
-	// DeactivateAccount 注销账号
-	DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error
 	// Logout 退出登录
 	Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error)
+
+	// 账号管理方法
+	// DeactivateAccount 注销账号
+	DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error
 }
 
 // userService 用户服务实现
@@ -57,6 +62,10 @@ func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRe
 		smsRepo:  smsRepo,
 	}
 }
+
+// 查询方法
+
+// 认证方法
 
 // SendVerificationCode 发送验证码
 func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) {
@@ -319,6 +328,8 @@ func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.
 
 	return &dto.LogoutResponse{Message: "退出登录成功"}, nil
 }
+
+// 账号管理方法
 
 // DeactivateAccount 注销账号
 func (s *userService) DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error {

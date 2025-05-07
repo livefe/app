@@ -52,7 +52,7 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 		UserID:     userID,
 		Content:    req.Content,
 		Images:     req.Images,
-		Visibility: req.Visibility,
+		Visibility: req.Visibility, // 使用dto中的可见性值，对应constant.Visibility类型
 		Likes:      0,
 		Comments:   0,
 	}

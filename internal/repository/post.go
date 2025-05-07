@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"app/internal/constant"
 	"app/internal/model"
 
 	"gorm.io/gorm"
@@ -8,11 +9,13 @@ import (
 
 // PostRepository 动态仓库接口
 type PostRepository interface {
-	// 动态相关
-	CreatePost(post *model.Post) error
+	// 查询方法
 	GetPost(id uint) (*model.Post, error)
 	GetUserPosts(userID uint, page, size int) ([]model.Post, int64, error)
 	GetFollowingPosts(userID uint, page, size int) ([]model.Post, int64, error)
+
+	// 修改方法
+	CreatePost(post *model.Post) error
 	IncrementPostLikes(postID uint) error
 	IncrementPostComments(postID uint) error
 }
@@ -27,10 +30,7 @@ func NewPostRepository(db *gorm.DB) PostRepository {
 	return &postRepository{db: db}
 }
 
-// CreatePost 创建动态
-func (r *postRepository) CreatePost(post *model.Post) error {
-	return r.db.Create(post).Error
-}
+// 查询方法
 
 // GetPost 获取动态
 func (r *postRepository) GetPost(id uint) (*model.Post, error) {
@@ -71,9 +71,9 @@ func (r *postRepository) GetFollowingPosts(userID uint, page, size int) ([]model
 
 	// 查询关注用户的动态
 	query := r.db.Model(&model.Post{}).
-		Joins("JOIN relations ON posts.user_id = relations.target_id").
-		Where("relations.user_id = ?", userID).
-		Where("posts.visibility IN (1, 2)") // 公开或仅好友可见
+		Joins("JOIN follower ON post.user_id = follower.target_id").
+		Where("follower.user_id = ?", userID).
+		Where("post.visibility IN (?, ?)", int(constant.VisibilityPublic), int(constant.VisibilityFriends)) // 公开或仅好友可见
 
 	err := query.Count(&count).Error
 	if err != nil {
@@ -86,6 +86,13 @@ func (r *postRepository) GetFollowingPosts(userID uint, page, size int) ([]model
 	}
 
 	return posts, count, nil
+}
+
+// 修改方法
+
+// CreatePost 创建动态
+func (r *postRepository) CreatePost(post *model.Post) error {
+	return r.db.Create(post).Error
 }
 
 // IncrementPostLikes 增加动态点赞数

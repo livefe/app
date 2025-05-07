@@ -9,20 +9,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RelationHandler 关系处理器
-type RelationHandler struct {
-	relationService service.RelationService
+// FollowerHandler 粉丝关注处理器
+type FollowerHandler struct {
+	followerService service.FollowerService
 }
 
-// NewRelationHandler 创建关系处理器实例
-func NewRelationHandler(relationService service.RelationService) *RelationHandler {
-	return &RelationHandler{
-		relationService: relationService,
+// NewFollowerHandler 创建粉丝关注处理器实例
+func NewFollowerHandler(followerService service.FollowerService) *FollowerHandler {
+	return &FollowerHandler{
+		followerService: followerService,
 	}
 }
 
 // FollowUser 关注用户
-func (h *RelationHandler) FollowUser(c *gin.Context) {
+func (h *FollowerHandler) FollowUser(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -38,7 +38,7 @@ func (h *RelationHandler) FollowUser(c *gin.Context) {
 	}
 
 	// 调用服务
-	res, err := h.relationService.FollowUser(c.Request.Context(), &req, userID.(uint))
+	res, err := h.followerService.FollowUser(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "关注用户失败", err)
 		return
@@ -48,7 +48,7 @@ func (h *RelationHandler) FollowUser(c *gin.Context) {
 }
 
 // UnfollowUser 取消关注用户
-func (h *RelationHandler) UnfollowUser(c *gin.Context) {
+func (h *FollowerHandler) UnfollowUser(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -64,7 +64,7 @@ func (h *RelationHandler) UnfollowUser(c *gin.Context) {
 	}
 
 	// 调用服务
-	err := h.relationService.UnfollowUser(c.Request.Context(), &req, userID.(uint))
+	err := h.followerService.UnfollowUser(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "取消关注失败", err)
 		return
@@ -74,7 +74,7 @@ func (h *RelationHandler) UnfollowUser(c *gin.Context) {
 }
 
 // GetFollowers 获取粉丝列表
-func (h *RelationHandler) GetFollowers(c *gin.Context) {
+func (h *FollowerHandler) GetFollowers(c *gin.Context) {
 	// 解析请求参数
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -93,7 +93,7 @@ func (h *RelationHandler) GetFollowers(c *gin.Context) {
 	}
 
 	// 调用服务
-	res, err := h.relationService.GetFollowers(c.Request.Context(), req)
+	res, err := h.followerService.GetFollowers(c.Request.Context(), req)
 	if err != nil {
 		response.InternalServerError(c, "获取粉丝列表失败", err)
 		return
@@ -103,7 +103,7 @@ func (h *RelationHandler) GetFollowers(c *gin.Context) {
 }
 
 // GetFollowing 获取关注列表
-func (h *RelationHandler) GetFollowing(c *gin.Context) {
+func (h *FollowerHandler) GetFollowing(c *gin.Context) {
 	// 解析请求参数
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -122,7 +122,7 @@ func (h *RelationHandler) GetFollowing(c *gin.Context) {
 	}
 
 	// 调用服务
-	res, err := h.relationService.GetFollowing(c.Request.Context(), req)
+	res, err := h.followerService.GetFollowing(c.Request.Context(), req)
 	if err != nil {
 		response.InternalServerError(c, "获取关注列表失败", err)
 		return

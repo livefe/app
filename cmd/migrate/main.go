@@ -37,7 +37,8 @@ func main() {
 	models := []interface{}{
 		&model.User{},
 		&model.SMSRecord{},
-		&model.Relation{},
+		// 已移除Relation模型，使用Follower和Friend模型替代
+		&model.Follower{},
 		&model.Post{},
 		&model.PostComment{},
 		// 在此处添加其他模型

@@ -15,10 +15,13 @@ var (
 
 // UserRepository 用户仓库接口
 type UserRepository interface {
-	// FindByMobile 根据手机号查找用户
-	FindByMobile(mobile string) (*model.User, error)
+	// 查询方法
 	// FindByID 根据ID查找用户
 	FindByID(id uint) (*model.User, error)
+	// FindByMobile 根据手机号查找用户
+	FindByMobile(mobile string) (*model.User, error)
+
+	// 修改方法
 	// Create 创建用户
 	Create(user *model.User) error
 	// SoftDelete 软删除用户（注销账号）
@@ -37,18 +40,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	}
 }
 
-// FindByMobile 根据手机号查找用户
-func (r *userRepository) FindByMobile(mobile string) (*model.User, error) {
-	var user model.User
-	result := r.db.Where("mobile = ?", mobile).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ErrRecordNotFound
-		}
-		return nil, result.Error
-	}
-	return &user, nil
-}
+// 查询方法
 
 // FindByID 根据ID查找用户
 func (r *userRepository) FindByID(id uint) (*model.User, error) {
@@ -62,6 +54,21 @@ func (r *userRepository) FindByID(id uint) (*model.User, error) {
 	}
 	return &user, nil
 }
+
+// FindByMobile 根据手机号查找用户
+func (r *userRepository) FindByMobile(mobile string) (*model.User, error) {
+	var user model.User
+	result := r.db.Where("mobile = ?", mobile).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrRecordNotFound
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+// 修改方法
 
 // Create 创建用户
 func (r *userRepository) Create(user *model.User) error {

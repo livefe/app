@@ -77,13 +77,7 @@ func (c *Container) GetSMSRepository() repository.SMSRepository {
 	return repo.(repository.SMSRepository)
 }
 
-// GetRelationRepository 获取关系仓库实例（懒加载）
-func (c *Container) GetRelationRepository() repository.RelationRepository {
-	repo := c.getOrCreateRepository("relation_repository", func() interface{} {
-		return repository.NewRelationRepository(c.db)
-	})
-	return repo.(repository.RelationRepository)
-}
+// 已移除GetRelationRepository，使用GetFollowerRepository和GetFriendRepository替代
 
 // GetPostRepository 获取动态仓库实例（懒加载）
 func (c *Container) GetPostRepository() repository.PostRepository {
@@ -124,13 +118,4 @@ func (c *Container) GetPostService() service.PostService {
 	return svc.(service.PostService)
 }
 
-// GetRelationService 获取关系服务实例（懒加载）
-func (c *Container) GetRelationService() service.RelationService {
-	svc := c.getOrCreateService("relation_service", func() interface{} {
-		return service.NewRelationService(
-			c.GetRelationRepository(),
-			c.GetUserRepository(),
-		)
-	})
-	return svc.(service.RelationService)
-}
+// 已移除GetRelationService，使用GetFollowerService和GetFriendService替代

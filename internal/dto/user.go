@@ -1,5 +1,14 @@
 package dto
 
+// UserBrief 用户简要信息
+// 在多个服务中使用，包括好友服务和粉丝关注服务
+type UserBrief struct {
+	ID       uint   `json:"id"`       // 用户ID
+	Nickname string `json:"nickname"` // 用户昵称
+	Avatar   string `json:"avatar"`   // 用户头像
+	// 可以根据需要扩展更多字段
+}
+
 // VerificationType 验证码类型
 type VerificationType string
 

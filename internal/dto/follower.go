@@ -2,7 +2,7 @@ package dto
 
 import "time"
 
-// 关系相关DTO
+// 粉丝关注相关DTO
 
 // FollowUserRequest 关注用户请求
 type FollowUserRequest struct {
@@ -46,11 +46,4 @@ type GetFollowingRequest struct {
 type GetFollowingResponse struct {
 	Total int         `json:"total"`
 	List  []UserBrief `json:"list"`
-}
-
-// UserBrief 用户简要信息
-type UserBrief struct {
-	ID       uint   `json:"id"`
-	Nickname string `json:"nickname"`
-	Avatar   string `json:"avatar"`
 }
