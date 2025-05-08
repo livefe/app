@@ -14,8 +14,8 @@ type Friend struct {
 	ID uint `gorm:"primaryKey;comment:好友关系ID，主键" json:"id"`
 
 	// 关系信息
-	UserID   uint `gorm:"index:idx_user_friend,priority:1;index:idx_user_target,priority:1,uniqueIndex;comment:用户ID，记录所有者" json:"user_id"`
-	TargetID uint `gorm:"index:idx_user_friend,priority:2;index:idx_user_target,priority:2,uniqueIndex;comment:目标用户ID，好友对象" json:"target_id"`
+	UserID   uint `gorm:"comment:用户ID，记录所有者" json:"user_id"`
+	TargetID uint `gorm:"comment:目标用户ID，好友对象" json:"target_id"`
 
 	// 状态信息
 	Status int `gorm:"type:smallint;default:0;comment:好友状态：0-待确认，1-已确认" json:"status"`
