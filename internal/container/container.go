@@ -61,6 +61,8 @@ func (c *Container) getOrCreateService(key string, creator func() interface{}) i
 	return actual
 }
 
+// ==================== 仓库实例获取方法 ====================
+
 // GetUserRepository 获取用户仓库实例（懒加载）
 func (c *Container) GetUserRepository() repository.UserRepository {
 	repo := c.getOrCreateRepository("user_repository", func() interface{} {
@@ -77,7 +79,21 @@ func (c *Container) GetSMSRepository() repository.SMSRepository {
 	return repo.(repository.SMSRepository)
 }
 
-// 已移除GetRelationRepository，使用GetFollowerRepository和GetFriendRepository替代
+// GetFollowerRepository 获取粉丝关注仓库实例（懒加载）
+func (c *Container) GetFollowerRepository() repository.FollowerRepository {
+	repo := c.getOrCreateRepository("follower_repository", func() interface{} {
+		return repository.NewFollowerRepository(c.db)
+	})
+	return repo.(repository.FollowerRepository)
+}
+
+// GetFriendRepository 获取好友关系仓库实例（懒加载）
+func (c *Container) GetFriendRepository() repository.FriendRepository {
+	repo := c.getOrCreateRepository("friend_repository", func() interface{} {
+		return repository.NewFriendRepository(c.db)
+	})
+	return repo.(repository.FriendRepository)
+}
 
 // GetPostRepository 获取动态仓库实例（懒加载）
 func (c *Container) GetPostRepository() repository.PostRepository {
@@ -95,6 +111,8 @@ func (c *Container) GetPostCommentRepository() repository.PostCommentRepository 
 	return repo.(repository.PostCommentRepository)
 }
 
+// ==================== 服务实例获取方法 ====================
+
 // GetUserService 获取用户服务实例（懒加载）
 func (c *Container) GetUserService() service.UserService {
 	svc := c.getOrCreateService("user_service", func() interface{} {
@@ -104,6 +122,28 @@ func (c *Container) GetUserService() service.UserService {
 		return service.NewUserService(userRepo, smsRepo)
 	})
 	return svc.(service.UserService)
+}
+
+// GetFollowerService 获取粉丝关注服务实例（懒加载）
+func (c *Container) GetFollowerService() service.FollowerService {
+	svc := c.getOrCreateService("follower_service", func() interface{} {
+		return service.NewFollowerService(
+			c.GetFollowerRepository(),
+			c.GetUserRepository(),
+		)
+	})
+	return svc.(service.FollowerService)
+}
+
+// GetFriendService 获取好友关系服务实例（懒加载）
+func (c *Container) GetFriendService() service.FriendService {
+	svc := c.getOrCreateService("friend_service", func() interface{} {
+		return service.NewFriendService(
+			c.GetFriendRepository(),
+			c.GetUserRepository(),
+		)
+	})
+	return svc.(service.FriendService)
 }
 
 // GetPostService 获取动态服务实例（懒加载）
@@ -117,5 +157,3 @@ func (c *Container) GetPostService() service.PostService {
 	})
 	return svc.(service.PostService)
 }
-
-// 已移除GetRelationService，使用GetFollowerService和GetFriendService替代
