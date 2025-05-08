@@ -79,8 +79,8 @@ func (s *postService) GetPosts(ctx context.Context, req *dto.GetPostsRequest, us
 
 	// 根据请求参数获取不同的动态列表
 	if req.UserID != nil && *req.UserID > 0 {
-		// 获取指定用户的动态
-		posts, count, err = s.postRepo.GetUserPosts(*req.UserID, req.Page, req.Size)
+		// 获取指定用户的动态，传递当前用户ID作为查看者ID
+		posts, count, err = s.postRepo.GetUserPosts(*req.UserID, req.Page, req.Size, userID)
 	} else {
 		// 获取关注用户的动态
 		posts, count, err = s.postRepo.GetFollowingPosts(userID, req.Page, req.Size)

@@ -59,7 +59,7 @@ func (s *friendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest
 	// 检查是否已经是好友或已发送请求
 	existingFriend, err := s.friendRepo.GetFriend(userID, req.TargetID)
 	if err == nil {
-		if existingFriend.Status == 1 {
+		if existingFriend.Status == int(constant.FriendStatusConfirmed) {
 			return nil, errors.New("已经是好友关系")
 		}
 		return nil, errors.New("已发送好友请求，等待对方确认")
@@ -67,11 +67,12 @@ func (s *friendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest
 		return nil, fmt.Errorf("查询好友关系失败: %w", err)
 	}
 
-	// 创建好友请求
+	// 创建好友请求（双记录模式下，CreateFriend会同时创建两条记录）
 	friend := &model.Friend{
-		UserID:   userID,
-		TargetID: req.TargetID,
-		Status:   0, // 待确认状态
+		UserID:    userID,
+		TargetID:  req.TargetID,
+		Status:    int(constant.FriendStatusPending), // 待确认状态
+		Direction: 0,                                 // 发起方
 	}
 
 	err = s.friendRepo.CreateFriend(friend)
@@ -99,9 +100,14 @@ func (s *friendService) AcceptFriend(ctx context.Context, req *dto.AcceptFriendR
 		return fmt.Errorf("查询好友请求失败: %w", err)
 	}
 
-	// 验证请求是否发给当前用户
-	if friend.TargetID != userID {
+	// 验证请求是否属于当前用户（在双记录模式下，检查用户是否为记录所有者）
+	if friend.UserID != userID {
 		return errors.New("无权操作此好友请求")
+	}
+
+	// 验证是否为接收方（在双记录模式下，接收方的Direction为1）
+	if friend.Direction != 1 {
+		return errors.New("只有接收方可以接受好友请求")
 	}
 
 	// 验证请求状态
@@ -109,7 +115,7 @@ func (s *friendService) AcceptFriend(ctx context.Context, req *dto.AcceptFriendR
 		return errors.New("该请求已处理")
 	}
 
-	// 更新好友状态为已接受
+	// 更新好友状态为已接受（在双记录模式下，UpdateFriendStatus会同时更新两条记录）
 	err = s.friendRepo.UpdateFriendStatus(friend.ID, int(constant.FriendStatusConfirmed))
 	if err != nil {
 		return fmt.Errorf("接受好友请求失败: %w", err)
@@ -129,18 +135,23 @@ func (s *friendService) RejectFriend(ctx context.Context, req *dto.RejectFriendR
 		return fmt.Errorf("查询好友请求失败: %w", err)
 	}
 
-	// 验证请求是否发给当前用户
-	if friend.TargetID != userID {
+	// 验证请求是否属于当前用户（在双记录模式下，检查用户是否为记录所有者）
+	if friend.UserID != userID {
 		return errors.New("无权操作此好友请求")
 	}
 
+	// 验证是否为接收方（在双记录模式下，接收方的Direction为1）
+	if friend.Direction != 1 {
+		return errors.New("只有接收方可以拒绝好友请求")
+	}
+
 	// 验证请求状态
-	if friend.Status != 0 {
+	if friend.Status != int(constant.FriendStatusPending) {
 		return errors.New("该请求已处理")
 	}
 
-	// 删除好友请求
-	err = s.friendRepo.DeleteFriend(friend.UserID, friend.TargetID)
+	// 删除好友请求（在双记录模式下，DeleteFriend会同时删除两条记录）
+	err = s.friendRepo.DeleteFriend(friend.TargetID, friend.UserID)
 	if err != nil {
 		return fmt.Errorf("拒绝好友请求失败: %w", err)
 	}
@@ -150,7 +161,7 @@ func (s *friendService) RejectFriend(ctx context.Context, req *dto.RejectFriendR
 
 // DeleteFriend 删除好友
 func (s *friendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendRequest, userID uint) error {
-	// 检查是否是好友关系
+	// 检查是否是好友关系（在双记录模式下，只需查询用户视角的记录）
 	friend, err := s.friendRepo.GetFriend(userID, req.TargetID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,11 +171,11 @@ func (s *friendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendR
 	}
 
 	// 验证好友状态
-	if friend.Status != 1 {
+	if friend.Status != int(constant.FriendStatusConfirmed) {
 		return errors.New("不是好友关系")
 	}
 
-	// 删除好友关系
+	// 删除好友关系（在双记录模式下，DeleteFriend会同时删除两条记录）
 	err = s.friendRepo.DeleteFriend(userID, req.TargetID)
 	if err != nil {
 		return fmt.Errorf("删除好友关系失败: %w", err)
@@ -175,7 +186,7 @@ func (s *friendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendR
 
 // GetFriendRequests 获取好友请求列表
 func (s *friendService) GetFriendRequests(ctx context.Context, req *dto.GetFriendRequestsRequest, userID uint) (*dto.GetFriendRequestsResponse, error) {
-	// 获取好友请求列表
+	// 获取好友请求列表（在双记录模式下，查询用户视角下的待确认请求）
 	requests, count, err := s.friendRepo.GetFriendRequests(userID, req.Page, req.Size)
 	if err != nil {
 		return nil, fmt.Errorf("获取好友请求列表失败: %w", err)
@@ -184,7 +195,8 @@ func (s *friendService) GetFriendRequests(ctx context.Context, req *dto.GetFrien
 	// 构建好友请求项列表
 	requestList := make([]dto.FriendRequestItem, 0, len(requests))
 	for _, request := range requests {
-		user, err := s.userRepo.FindByID(request.UserID)
+		// 在双记录模式下，TargetID是发送请求的用户ID
+		user, err := s.userRepo.FindByID(request.TargetID)
 		if err != nil {
 			continue // 跳过获取失败的用户
 		}
@@ -207,36 +219,35 @@ func (s *friendService) GetFriendRequests(ctx context.Context, req *dto.GetFrien
 
 // GetFriends 获取好友列表
 func (s *friendService) GetFriends(ctx context.Context, req *dto.GetFriendsRequest, userID uint) (*dto.GetFriendsResponse, error) {
-	// 获取好友关系列表
+	// 获取好友列表（在双记录模式下，只需查询用户视角下的已确认好友）
 	friends, count, err := s.friendRepo.GetFriends(userID, req.Page, req.Size)
 	if err != nil {
 		return nil, fmt.Errorf("获取好友列表失败: %w", err)
 	}
 
-	// 构建用户简要信息列表
-	userList := make([]dto.UserBrief, 0, len(friends))
+	// 构建好友项列表
+	friendList := make([]dto.FriendItem, 0, len(friends))
 	for _, friend := range friends {
-		// 确定好友ID（如果当前用户是UserID，那么好友是TargetID，反之亦然）
-		friendID := friend.TargetID
-		if friend.TargetID == userID {
-			friendID = friend.UserID
-		}
+		// 在双记录模式下，TargetID就是好友的用户ID
+		friendUserID := friend.TargetID
 
-		user, err := s.userRepo.FindByID(friendID)
+		// 获取好友用户信息
+		user, err := s.userRepo.FindByID(friendUserID)
 		if err != nil {
 			continue // 跳过获取失败的用户
 		}
 
-		// 直接创建用户简要信息
-		userList = append(userList, dto.UserBrief{
-			ID:       user.ID,
-			Nickname: user.Nickname,
-			Avatar:   user.Avatar,
+		friendList = append(friendList, dto.FriendItem{
+			ID:        friend.ID,
+			UserID:    user.ID,
+			Nickname:  user.Nickname,
+			Avatar:    user.Avatar,
+			CreatedAt: friend.CreatedAt,
 		})
 	}
 
 	return &dto.GetFriendsResponse{
 		Total: int(count),
-		List:  userList,
+		List:  friendList,
 	}, nil
 }

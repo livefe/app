@@ -64,6 +64,15 @@ type GetFriendsRequest struct {
 
 // GetFriendsResponse 获取好友列表响应
 type GetFriendsResponse struct {
-	Total int         `json:"total"`
-	List  []UserBrief `json:"list"`
+	Total int          `json:"total"`
+	List  []FriendItem `json:"list"`
+}
+
+// FriendItem 好友项
+type FriendItem struct {
+	ID        uint      `json:"id"`
+	UserID    uint      `json:"user_id"`
+	Nickname  string    `json:"nickname"`
+	Avatar    string    `json:"avatar"`
+	CreatedAt time.Time `json:"created_at"`
 }
