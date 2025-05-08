@@ -6,10 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// Friend 好友关系模型
+// UserFriend 好友关系模型
 // 存储用户之间的好友关系
 // 采用双记录模式，每个好友关系在数据库中存储为两条记录
-type Friend struct {
+type UserFriend struct {
 	// 基本标识信息
 	ID uint `gorm:"primaryKey;comment:好友关系ID，主键" json:"id"`
 

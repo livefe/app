@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// Follower 粉丝关注模型
+// UserFollower 粉丝关注模型
 // 存储用户之间的关注关系
-type Follower struct {
+type UserFollower struct {
 	// 基本标识信息
 	ID uint `gorm:"primaryKey;comment:关注ID，主键" json:"id"`
 

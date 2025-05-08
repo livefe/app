@@ -8,20 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterFriendRoutes 注册好友关系相关路由
-func RegisterFriendRoutes(r *gin.Engine) {
+// RegisterUserFriendRoutes 注册好友关系相关路由
+func RegisterUserFriendRoutes(r *gin.Engine) {
 	// 从容器获取好友关系服务
 	container := container.GetInstance()
-	friendService := container.GetFriendService()
+	friendService := container.GetUserFriendService()
 
 	// 初始化处理器
-	friendHandler := handler.NewFriendHandler(friendService)
+	friendHandler := handler.NewUserFriendHandler(friendService)
 
 	// API根路径
 	apiGroup := r.Group("/api")
 
 	// 好友关系相关API组
-	friendGroup := apiGroup.Group("/friend")
+	friendGroup := apiGroup.Group("/user_friend")
 
 	// 添加认证中间件
 	authGroup := friendGroup.Group("/", middleware.AuthMiddleware())

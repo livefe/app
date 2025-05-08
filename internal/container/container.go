@@ -79,20 +79,20 @@ func (c *Container) GetSMSRepository() repository.SMSRepository {
 	return repo.(repository.SMSRepository)
 }
 
-// GetFollowerRepository 获取粉丝关注仓库实例（懒加载）
-func (c *Container) GetFollowerRepository() repository.FollowerRepository {
-	repo := c.getOrCreateRepository("follower_repository", func() interface{} {
-		return repository.NewFollowerRepository(c.db)
+// GetUserFollowerRepository 获取粉丝关注仓库实例（懒加载）
+func (c *Container) GetUserFollowerRepository() repository.UserFollowerRepository {
+	repo := c.getOrCreateRepository("user_follower_repository", func() interface{} {
+		return repository.NewUserFollowerRepository(c.db)
 	})
-	return repo.(repository.FollowerRepository)
+	return repo.(repository.UserFollowerRepository)
 }
 
-// GetFriendRepository 获取好友关系仓库实例（懒加载）
-func (c *Container) GetFriendRepository() repository.FriendRepository {
-	repo := c.getOrCreateRepository("friend_repository", func() interface{} {
-		return repository.NewFriendRepository(c.db)
+// GetUserFriendRepository 获取好友关系仓库实例（懒加载）
+func (c *Container) GetUserFriendRepository() repository.UserFriendRepository {
+	repo := c.getOrCreateRepository("user_friend_repository", func() interface{} {
+		return repository.NewUserFriendRepository(c.db)
 	})
-	return repo.(repository.FriendRepository)
+	return repo.(repository.UserFriendRepository)
 }
 
 // GetPostRepository 获取动态仓库实例（懒加载）
@@ -124,26 +124,26 @@ func (c *Container) GetUserService() service.UserService {
 	return svc.(service.UserService)
 }
 
-// GetFollowerService 获取粉丝关注服务实例（懒加载）
-func (c *Container) GetFollowerService() service.FollowerService {
-	svc := c.getOrCreateService("follower_service", func() interface{} {
-		return service.NewFollowerService(
-			c.GetFollowerRepository(),
+// GetUserFollowerService 获取粉丝关注服务实例（懒加载）
+func (c *Container) GetUserFollowerService() service.UserFollowerService {
+	svc := c.getOrCreateService("user_follower_service", func() interface{} {
+		return service.NewUserFollowerService(
+			c.GetUserFollowerRepository(),
 			c.GetUserRepository(),
 		)
 	})
-	return svc.(service.FollowerService)
+	return svc.(service.UserFollowerService)
 }
 
-// GetFriendService 获取好友关系服务实例（懒加载）
-func (c *Container) GetFriendService() service.FriendService {
-	svc := c.getOrCreateService("friend_service", func() interface{} {
-		return service.NewFriendService(
-			c.GetFriendRepository(),
+// GetUserFriendService 获取好友关系服务实例（懒加载）
+func (c *Container) GetUserFriendService() service.UserFriendService {
+	svc := c.getOrCreateService("user_friend_service", func() interface{} {
+		return service.NewUserFriendService(
+			c.GetUserFriendRepository(),
 			c.GetUserRepository(),
 		)
 	})
-	return svc.(service.FriendService)
+	return svc.(service.UserFriendService)
 }
 
 // GetPostService 获取动态服务实例（懒加载）

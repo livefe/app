@@ -12,8 +12,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// FriendService 好友关系服务接口
-type FriendService interface {
+// UserFriendService 好友关系服务接口
+type UserFriendService interface {
 	// AddFriend 添加好友
 	AddFriend(ctx context.Context, req *dto.AddFriendRequest, userID uint) (*dto.AddFriendResponse, error)
 	// AcceptFriend 接受好友请求
@@ -28,25 +28,25 @@ type FriendService interface {
 	GetFriends(ctx context.Context, req *dto.GetFriendsRequest, userID uint) (*dto.GetFriendsResponse, error)
 }
 
-// friendService 好友关系服务实现
-type friendService struct {
-	friendRepo repository.FriendRepository
+// userFriendService 好友关系服务实现
+type userFriendService struct {
+	friendRepo repository.UserFriendRepository
 	userRepo   repository.UserRepository
 }
 
-// NewFriendService 创建好友关系服务实例
-func NewFriendService(
-	friendRepo repository.FriendRepository,
+// NewUserFriendService 创建好友关系服务实例
+func NewUserFriendService(
+	friendRepo repository.UserFriendRepository,
 	userRepo repository.UserRepository,
-) FriendService {
-	return &friendService{
+) UserFriendService {
+	return &userFriendService{
 		friendRepo: friendRepo,
 		userRepo:   userRepo,
 	}
 }
 
 // AddFriend 添加好友
-func (s *friendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest, userID uint) (*dto.AddFriendResponse, error) {
+func (s *userFriendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest, userID uint) (*dto.AddFriendResponse, error) {
 	// 检查目标用户是否存在
 	_, err := s.userRepo.FindByID(req.TargetID)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *friendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest
 	}
 
 	// 创建好友请求（双记录模式下，CreateFriend会同时创建两条记录）
-	friend := &model.Friend{
+	friend := &model.UserFriend{
 		UserID:    userID,
 		TargetID:  req.TargetID,
 		Status:    int(constant.FriendStatusPending), // 待确认状态
@@ -90,7 +90,7 @@ func (s *friendService) AddFriend(ctx context.Context, req *dto.AddFriendRequest
 }
 
 // AcceptFriend 接受好友请求
-func (s *friendService) AcceptFriend(ctx context.Context, req *dto.AcceptFriendRequest, userID uint) error {
+func (s *userFriendService) AcceptFriend(ctx context.Context, req *dto.AcceptFriendRequest, userID uint) error {
 	// 获取好友请求
 	friend, err := s.friendRepo.GetFriendByID(req.RequestID)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *friendService) AcceptFriend(ctx context.Context, req *dto.AcceptFriendR
 }
 
 // RejectFriend 拒绝好友请求
-func (s *friendService) RejectFriend(ctx context.Context, req *dto.RejectFriendRequest, userID uint) error {
+func (s *userFriendService) RejectFriend(ctx context.Context, req *dto.RejectFriendRequest, userID uint) error {
 	// 获取好友请求
 	friend, err := s.friendRepo.GetFriendByID(req.RequestID)
 	if err != nil {
@@ -160,7 +160,7 @@ func (s *friendService) RejectFriend(ctx context.Context, req *dto.RejectFriendR
 }
 
 // DeleteFriend 删除好友
-func (s *friendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendRequest, userID uint) error {
+func (s *userFriendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendRequest, userID uint) error {
 	// 检查是否是好友关系（在双记录模式下，只需查询用户视角的记录）
 	friend, err := s.friendRepo.GetFriend(userID, req.TargetID)
 	if err != nil {
@@ -185,7 +185,7 @@ func (s *friendService) DeleteFriend(ctx context.Context, req *dto.DeleteFriendR
 }
 
 // GetFriendRequests 获取好友请求列表
-func (s *friendService) GetFriendRequests(ctx context.Context, req *dto.GetFriendRequestsRequest, userID uint) (*dto.GetFriendRequestsResponse, error) {
+func (s *userFriendService) GetFriendRequests(ctx context.Context, req *dto.GetFriendRequestsRequest, userID uint) (*dto.GetFriendRequestsResponse, error) {
 	// 获取好友请求列表（在双记录模式下，查询用户视角下的待确认请求）
 	requests, count, err := s.friendRepo.GetFriendRequests(userID, req.Page, req.Size)
 	if err != nil {
@@ -218,7 +218,7 @@ func (s *friendService) GetFriendRequests(ctx context.Context, req *dto.GetFrien
 }
 
 // GetFriends 获取好友列表
-func (s *friendService) GetFriends(ctx context.Context, req *dto.GetFriendsRequest, userID uint) (*dto.GetFriendsResponse, error) {
+func (s *userFriendService) GetFriends(ctx context.Context, req *dto.GetFriendsRequest, userID uint) (*dto.GetFriendsResponse, error) {
 	// 获取好友列表（在双记录模式下，只需查询用户视角下的已确认好友）
 	friends, count, err := s.friendRepo.GetFriends(userID, req.Page, req.Size)
 	if err != nil {

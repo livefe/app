@@ -57,7 +57,7 @@ func (r *postRepository) GetUserPosts(userID uint, page, size int, viewerID ...u
 	if len(viewerID) > 0 && viewerID[0] != userID {
 		// 检查是否为好友关系（双记录模式）
 		var friendCount int64
-		r.db.Model(&model.Friend{}).
+		r.db.Model(&model.UserFriend{}).
 			Where("user_id = ? AND target_id = ? AND status = ? AND direction IN (0, 1)", viewerID[0], userID, int(constant.FriendStatusConfirmed)).
 			Count(&friendCount)
 
@@ -96,16 +96,16 @@ func (r *postRepository) GetFollowingPosts(userID uint, page, size int) ([]model
 	// 1. 获取所有关注用户的公开动态
 	publicPostsQuery := r.db.Table("posts").
 		Select("posts.*").
-		Joins("JOIN follower ON posts.user_id = follower.target_id").
-		Where("follower.user_id = ?", userID).
+		Joins("JOIN user_follower ON posts.user_id = user_follower.target_id").
+		Where("user_follower.user_id = ?", userID).
 		Where("posts.visibility = ?", int(constant.VisibilityPublic))
 
 	// 2. 获取好友的仅好友可见动态
 	friendPostsQuery := r.db.Table("posts").
 		Select("posts.*").
-		Joins("JOIN friend ON posts.user_id = friend.target_id").
-		Where("friend.user_id = ?", userID).
-		Where("friend.status = ? AND friend.direction IN (0, 1)", int(constant.FriendStatusConfirmed)). // 已确认的好友关系（双记录模式）
+		Joins("JOIN user_friend ON posts.user_id = user_friend.target_id").
+		Where("user_friend.user_id = ?", userID).
+		Where("user_friend.status = ? AND user_friend.direction IN (0, 1)", int(constant.FriendStatusConfirmed)). // 已确认的好友关系（双记录模式）
 		Where("posts.visibility = ?", int(constant.VisibilityFriends))
 
 	// 使用UNION合并查询结果

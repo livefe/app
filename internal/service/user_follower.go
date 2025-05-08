@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// FollowerService 粉丝关注服务接口
-type FollowerService interface {
+// UserFollowerService 粉丝关注服务接口
+type UserFollowerService interface {
 	// 查询方法
 	// GetFollowers 获取粉丝列表
 	GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error)
@@ -26,18 +26,18 @@ type FollowerService interface {
 	UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error
 }
 
-// followerService 粉丝关注服务实现
-type followerService struct {
-	followerRepo repository.FollowerRepository
+// userFollowerService 粉丝关注服务实现
+type userFollowerService struct {
+	followerRepo repository.UserFollowerRepository
 	userRepo     repository.UserRepository
 }
 
-// NewFollowerService 创建粉丝关注服务实例
-func NewFollowerService(
-	followerRepo repository.FollowerRepository,
+// NewUserFollowerService 创建粉丝关注服务实例
+func NewUserFollowerService(
+	followerRepo repository.UserFollowerRepository,
 	userRepo repository.UserRepository,
-) FollowerService {
-	return &followerService{
+) UserFollowerService {
+	return &userFollowerService{
 		followerRepo: followerRepo,
 		userRepo:     userRepo,
 	}
@@ -46,7 +46,7 @@ func NewFollowerService(
 // 查询方法
 
 // GetFollowers 获取粉丝列表
-func (s *followerService) GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error) {
+func (s *userFollowerService) GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error) {
 	// 获取粉丝关系列表
 	followers, count, err := s.followerRepo.GetFollowers(req.UserID, req.Page, req.Size)
 	if err != nil {
@@ -76,7 +76,7 @@ func (s *followerService) GetFollowers(ctx context.Context, req *dto.GetFollower
 }
 
 // GetFollowing 获取关注列表
-func (s *followerService) GetFollowing(ctx context.Context, req *dto.GetFollowingRequest) (*dto.GetFollowingResponse, error) {
+func (s *userFollowerService) GetFollowing(ctx context.Context, req *dto.GetFollowingRequest) (*dto.GetFollowingResponse, error) {
 	// 获取关注关系列表
 	following, count, err := s.followerRepo.GetFollowing(req.UserID, req.Page, req.Size)
 	if err != nil {
@@ -108,7 +108,7 @@ func (s *followerService) GetFollowing(ctx context.Context, req *dto.GetFollowin
 // 修改方法
 
 // FollowUser 关注用户
-func (s *followerService) FollowUser(ctx context.Context, req *dto.FollowUserRequest, userID uint) (*dto.FollowUserResponse, error) {
+func (s *userFollowerService) FollowUser(ctx context.Context, req *dto.FollowUserRequest, userID uint) (*dto.FollowUserResponse, error) {
 	// 检查目标用户是否存在
 	_, err := s.userRepo.FindByID(req.TargetID)
 	if err != nil {
@@ -127,7 +127,7 @@ func (s *followerService) FollowUser(ctx context.Context, req *dto.FollowUserReq
 	}
 
 	// 创建关注关系
-	follower := &model.Follower{
+	follower := &model.UserFollower{
 		UserID:   userID,
 		TargetID: req.TargetID,
 	}
@@ -146,7 +146,7 @@ func (s *followerService) FollowUser(ctx context.Context, req *dto.FollowUserReq
 }
 
 // UnfollowUser 取消关注用户
-func (s *followerService) UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error {
+func (s *userFollowerService) UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error {
 	// 检查是否已关注
 	_, err := s.followerRepo.GetFollower(userID, req.TargetID)
 	if err != nil {

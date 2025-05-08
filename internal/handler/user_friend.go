@@ -9,20 +9,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// FriendHandler 好友关系处理器
-type FriendHandler struct {
-	friendService service.FriendService
+// UserFriendHandler 好友关系处理器
+type UserFriendHandler struct {
+	friendService service.UserFriendService
 }
 
-// NewFriendHandler 创建好友关系处理器实例
-func NewFriendHandler(friendService service.FriendService) *FriendHandler {
-	return &FriendHandler{
+// NewUserFriendHandler 创建好友关系处理器实例
+func NewUserFriendHandler(friendService service.UserFriendService) *UserFriendHandler {
+	return &UserFriendHandler{
 		friendService: friendService,
 	}
 }
 
 // AddFriend 添加好友
-func (h *FriendHandler) AddFriend(c *gin.Context) {
+func (h *UserFriendHandler) AddFriend(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -48,7 +48,7 @@ func (h *FriendHandler) AddFriend(c *gin.Context) {
 }
 
 // AcceptFriend 接受好友请求
-func (h *FriendHandler) AcceptFriend(c *gin.Context) {
+func (h *UserFriendHandler) AcceptFriend(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -74,7 +74,7 @@ func (h *FriendHandler) AcceptFriend(c *gin.Context) {
 }
 
 // RejectFriend 拒绝好友请求
-func (h *FriendHandler) RejectFriend(c *gin.Context) {
+func (h *UserFriendHandler) RejectFriend(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -100,7 +100,7 @@ func (h *FriendHandler) RejectFriend(c *gin.Context) {
 }
 
 // DeleteFriend 删除好友
-func (h *FriendHandler) DeleteFriend(c *gin.Context) {
+func (h *UserFriendHandler) DeleteFriend(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -126,7 +126,7 @@ func (h *FriendHandler) DeleteFriend(c *gin.Context) {
 }
 
 // GetFriendRequests 获取好友请求列表
-func (h *FriendHandler) GetFriendRequests(c *gin.Context) {
+func (h *UserFriendHandler) GetFriendRequests(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -154,7 +154,7 @@ func (h *FriendHandler) GetFriendRequests(c *gin.Context) {
 }
 
 // GetFriends 获取好友列表
-func (h *FriendHandler) GetFriends(c *gin.Context) {
+func (h *UserFriendHandler) GetFriends(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {

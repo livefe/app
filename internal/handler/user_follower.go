@@ -9,20 +9,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// FollowerHandler 粉丝关注处理器
-type FollowerHandler struct {
-	followerService service.FollowerService
+// UserFollowerHandler 粉丝关注处理器
+type UserFollowerHandler struct {
+	followerService service.UserFollowerService
 }
 
-// NewFollowerHandler 创建粉丝关注处理器实例
-func NewFollowerHandler(followerService service.FollowerService) *FollowerHandler {
-	return &FollowerHandler{
+// NewUserFollowerHandler 创建粉丝关注处理器实例
+func NewUserFollowerHandler(followerService service.UserFollowerService) *UserFollowerHandler {
+	return &UserFollowerHandler{
 		followerService: followerService,
 	}
 }
 
 // FollowUser 关注用户
-func (h *FollowerHandler) FollowUser(c *gin.Context) {
+func (h *UserFollowerHandler) FollowUser(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -48,7 +48,7 @@ func (h *FollowerHandler) FollowUser(c *gin.Context) {
 }
 
 // UnfollowUser 取消关注用户
-func (h *FollowerHandler) UnfollowUser(c *gin.Context) {
+func (h *UserFollowerHandler) UnfollowUser(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -74,7 +74,7 @@ func (h *FollowerHandler) UnfollowUser(c *gin.Context) {
 }
 
 // GetFollowers 获取粉丝列表
-func (h *FollowerHandler) GetFollowers(c *gin.Context) {
+func (h *UserFollowerHandler) GetFollowers(c *gin.Context) {
 	// 解析请求参数
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -103,7 +103,7 @@ func (h *FollowerHandler) GetFollowers(c *gin.Context) {
 }
 
 // GetFollowing 获取关注列表
-func (h *FollowerHandler) GetFollowing(c *gin.Context) {
+func (h *UserFollowerHandler) GetFollowing(c *gin.Context) {
 	// 解析请求参数
 	userIDStr := c.Param("user_id")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)

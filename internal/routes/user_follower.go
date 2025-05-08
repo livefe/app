@@ -8,20 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterFollowerRoutes 注册粉丝关注相关路由
-func RegisterFollowerRoutes(r *gin.Engine) {
+// RegisterUserFollowerRoutes 注册粉丝关注相关路由
+func RegisterUserFollowerRoutes(r *gin.Engine) {
 	// 从容器获取粉丝关注服务
 	container := container.GetInstance()
-	followerService := container.GetFollowerService()
+	followerService := container.GetUserFollowerService()
 
 	// 初始化处理器
-	followerHandler := handler.NewFollowerHandler(followerService)
+	followerHandler := handler.NewUserFollowerHandler(followerService)
 
 	// API根路径
 	apiGroup := r.Group("/api")
 
 	// 粉丝关注相关API组
-	followerGroup := apiGroup.Group("/follower")
+	followerGroup := apiGroup.Group("/user_follower")
 
 	// 添加认证中间件
 	authGroup := followerGroup.Group("/", middleware.AuthMiddleware())

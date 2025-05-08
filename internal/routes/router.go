@@ -26,10 +26,10 @@ func SetupRouter(r *gin.Engine) *gin.Engine {
 	RegisterPostRoutes(r)
 
 	// 注册粉丝关注相关路由
-	RegisterFollowerRoutes(r)
+	RegisterUserFollowerRoutes(r)
 
 	// 注册好友关系相关路由
-	RegisterFriendRoutes(r)
+	RegisterUserFriendRoutes(r)
 
 	// 注意：已移除RegisterRelationRoutes，相关功能已由粉丝关注和好友关系模块替代
 
