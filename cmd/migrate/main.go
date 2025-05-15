@@ -19,7 +19,7 @@ func main() {
 	}
 
 	// 初始化数据库连接
-	err = database.InitGormDB()
+	err = database.Init()
 	if err != nil {
 		log.Fatalf("数据库连接失败: %v", err)
 	}

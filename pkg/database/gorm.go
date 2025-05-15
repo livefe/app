@@ -1,3 +1,5 @@
+// Package database 提供数据库连接和操作的封装
+// 基于GORM框架，支持MySQL数据库的连接管理和操作
 package database
 
 import (
@@ -13,34 +15,37 @@ import (
 )
 
 // GormDB 全局GORM数据库连接实例
+// 在应用程序中可直接使用此变量进行数据库操作
 var GormDB *gorm.DB
 
-// GormConfig GORM数据库连接配置
+// GormConfig GORM数据库连接配置结构体
+// 包含连接字符串、连接池设置和日志级别等配置项
 type GormConfig struct {
-	DSN             string          // 数据库连接字符串
-	MaxOpenConns    int             // 最大打开连接数
-	MaxIdleConns    int             // 最大空闲连接数
-	ConnMaxLifetime time.Duration   // 连接最大生存时间
-	ConnMaxIdleTime time.Duration   // 空闲连接最大生存时间
-	LogLevel        logger.LogLevel // 日志级别
+	DSN             string          // 数据库连接字符串(Data Source Name)
+	MaxOpenConns    int             // 最大打开连接数，控制并发连接数量
+	MaxIdleConns    int             // 最大空闲连接数，控制连接池大小
+	ConnMaxLifetime time.Duration   // 连接最大生存时间，超时后会被关闭重建
+	ConnMaxIdleTime time.Duration   // 空闲连接最大生存时间，超时后会被关闭
+	LogLevel        logger.LogLevel // 日志级别，控制SQL日志输出详细程度
 }
 
-// InitGormDB 初始化GORM数据库连接
-func InitGormDB() error {
+// Init 初始化GORM数据库连接并配置连接池
+// 成功时返回nil，失败时返回带上下文的错误信息
+func Init() error {
 	// 获取并解析数据库配置
 	gormConfig, err := parseGormConfig()
 	if err != nil {
 		return fmt.Errorf("解析GORM数据库配置失败: %w", err)
 	}
 
-	// 配置GORM日志（已简化）
+	// 配置GORM日志
 	gormLogger := logger.New(
-		nil, // 移除日志输出
+		nil, // 不使用默认的日志输出，由应用自行处理日志
 		logger.Config{
-			SlowThreshold:             200 * time.Millisecond, // 慢SQL阈值
-			LogLevel:                  logger.Silent,          // 静默日志级别
-			IgnoreRecordNotFoundError: true,                   // 忽略记录未找到错误
-			Colorful:                  false,                  // 关闭彩色打印
+			SlowThreshold:             200 * time.Millisecond, // 慢SQL阈值，超过此时间的查询会被记录
+			LogLevel:                  logger.Silent,          // 静默日志级别，不输出SQL日志
+			IgnoreRecordNotFoundError: true,                   // 忽略记录未找到错误，减少日志噪音
+			Colorful:                  false,                  // 关闭彩色打印，适合生产环境
 		},
 	)
 
@@ -48,9 +53,9 @@ func InitGormDB() error {
 	gormDialectorConfig := &gorm.Config{
 		Logger: gormLogger,
 		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true, // 使用单数表名
+			SingularTable: true, // 使用单数表名，与数据库表名一致
 		},
-		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束
+		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束，提高迁移性能
 	}
 
 	// 连接数据库
@@ -66,17 +71,15 @@ func InitGormDB() error {
 	}
 
 	// 配置连接池
-	sqlDB.SetMaxOpenConns(gormConfig.MaxOpenConns)
-	sqlDB.SetMaxIdleConns(gormConfig.MaxIdleConns)
-	sqlDB.SetConnMaxLifetime(gormConfig.ConnMaxLifetime)
-	sqlDB.SetConnMaxIdleTime(gormConfig.ConnMaxIdleTime)
+	sqlDB.SetMaxOpenConns(gormConfig.MaxOpenConns)       // 设置最大打开连接数
+	sqlDB.SetMaxIdleConns(gormConfig.MaxIdleConns)       // 设置最大空闲连接数
+	sqlDB.SetConnMaxLifetime(gormConfig.ConnMaxLifetime) // 设置连接最大生存时间
+	sqlDB.SetConnMaxIdleTime(gormConfig.ConnMaxIdleTime) // 设置空闲连接最大生存时间
 
 	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("GORM数据库连接测试失败: %w", err)
 	}
-
-	// 数据库连接成功
 
 	// 设置全局GormDB实例
 	GormDB = db

@@ -18,6 +18,7 @@ import (
 	"app/pkg/sms"
 )
 
+// 错误常量定义
 var (
 	// ErrUserNotFound 用户不存在错误
 	ErrUserNotFound = errors.New(constant.ErrUserNotFound)
@@ -27,15 +28,14 @@ var (
 	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed)
 )
 
-// TokenBlacklistPrefix 令牌黑名单前缀，使用常量包中的定义
-const TokenBlacklistPrefix = constant.TokenBlacklistPrefix
+// 常量定义
+const (
+	// TokenBlacklistPrefix 令牌黑名单前缀
+	TokenBlacklistPrefix = constant.TokenBlacklistPrefix
+)
 
 // UserService 用户服务接口
 type UserService interface {
-	// 查询方法
-	// GetUserInfo 获取用户信息
-	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
-
 	// 认证方法
 	// SendVerificationCode 发送验证码
 	SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error)
@@ -43,6 +43,10 @@ type UserService interface {
 	VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)
 	// Logout 退出登录
 	Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error)
+
+	// 查询方法
+	// GetUserInfo 获取用户信息
+	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
 
 	// 账号管理方法
 	// DeactivateAccount 注销账号
@@ -63,7 +67,13 @@ func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRe
 	}
 }
 
-// 查询方法
+// 工具函数
+
+// generateVerificationCode 生成指定长度的随机验证码
+func generateVerificationCode(length int) string {
+	// 使用utils包中的函数生成随机数字
+	return utils.GenerateRandomDigits(length)
+}
 
 // 认证方法
 
@@ -243,49 +253,6 @@ func (s *userService) VerificationCodeLogin(ctx context.Context, req *dto.Verifi
 	return response, nil
 }
 
-// generateVerificationCode 生成指定长度的随机验证码
-func generateVerificationCode(length int) string {
-	// 使用utils包中的函数生成随机数字
-	return utils.GenerateRandomDigits(length)
-}
-
-// GetUserInfo 获取用户信息
-func (s *userService) GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error) {
-	// 记录开始处理请求的日志
-	logger.Info(ctx, "开始获取用户信息", logger.Uint("user_id", id))
-
-	// 根据ID查找用户
-	user, err := s.userRepo.FindByID(id)
-	if err != nil {
-		if errors.Is(err, repository.ErrRecordNotFound) {
-			logger.Warn(ctx, "用户不存在", logger.Uint("user_id", id))
-			return nil, ErrUserNotFound
-		}
-		logger.Error(ctx, "查询用户失败",
-			logger.Uint("user_id", id),
-			logger.Err(err))
-		return nil, fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	// 构建响应
-	response := &dto.UserInfoResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Mobile:    user.Mobile,
-		Nickname:  user.Nickname,
-		Avatar:    user.Avatar,
-		Status:    user.Status,
-		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
-	}
-
-	// 记录成功日志
-	logger.Info(ctx, "获取用户信息成功",
-		logger.Uint("user_id", user.ID),
-		logger.String("username", user.Username))
-
-	return response, nil
-}
-
 // Logout 退出登录
 func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error) {
 	// 记录开始处理请求的日志
@@ -327,6 +294,45 @@ func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.
 		logger.Uint("user_id", claims.UserID))
 
 	return &dto.LogoutResponse{Message: "退出登录成功"}, nil
+}
+
+// 查询方法
+
+// GetUserInfo 获取用户信息
+func (s *userService) GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error) {
+	// 记录开始处理请求的日志
+	logger.Info(ctx, "开始获取用户信息", logger.Uint("user_id", id))
+
+	// 根据ID查找用户
+	user, err := s.userRepo.FindByID(id)
+	if err != nil {
+		if errors.Is(err, repository.ErrRecordNotFound) {
+			logger.Warn(ctx, "用户不存在", logger.Uint("user_id", id))
+			return nil, ErrUserNotFound
+		}
+		logger.Error(ctx, "查询用户失败",
+			logger.Uint("user_id", id),
+			logger.Err(err))
+		return nil, fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 构建响应
+	response := &dto.UserInfoResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Mobile:    user.Mobile,
+		Nickname:  user.Nickname,
+		Avatar:    user.Avatar,
+		Status:    user.Status,
+		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+
+	// 记录成功日志
+	logger.Info(ctx, "获取用户信息成功",
+		logger.Uint("user_id", user.ID),
+		logger.String("username", user.Username))
+
+	return response, nil
 }
 
 // 账号管理方法

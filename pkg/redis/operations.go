@@ -1,3 +1,4 @@
+// Package redis 提供Redis数据库操作的封装
 package redis
 
 import (
@@ -10,43 +11,53 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// 定义包级错误常量，便于统一错误处理
 var (
-	// ErrNil 表示Redis中不存在该键
-	ErrNil = errors.New("redis: nil")
-	// ErrKeyNotFound 表示键不存在
+	// ErrNil 表示Redis中不存在该键，与redis.Nil保持一致
+	ErrNil = redis.Nil
+	// ErrKeyNotFound 表示键不存在，用于统一API返回
 	ErrKeyNotFound = errors.New("key not found")
-	// ErrInvalidType 表示类型无效
+	// ErrInvalidType 表示类型无效，用于类型转换失败时
 	ErrInvalidType = errors.New("invalid type")
 )
 
 // 默认上下文超时时间
 const defaultTimeout = 5 * time.Second
 
-// 创建带超时的上下文
+// getContext 创建带默认超时的上下文
+// 返回上下文和取消函数，调用方负责在适当时机调用cancel
 func getContext() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), defaultTimeout)
 }
 
 // executeWithRetry 执行带重试的Redis操作，最多重试3次
+// 参数operation为要执行的Redis操作函数
+// 返回操作结果错误，如果是预期的错误(如键不存在)则直接返回不重试
 func executeWithRetry(operation func() error) error {
 	var err error
 	for i := 0; i < 3; i++ {
 		err = operation()
+		// 如果操作成功或是预期的错误(键不存在)，直接返回
 		if err == nil || err == redis.Nil || err == ErrKeyNotFound {
 			return err
 		}
 
+		// 如果是连接相关错误，则等待后重试
 		if isConnectionError(err) {
+			// 指数退避策略，每次重试等待时间增加
 			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 
+		// 其他错误直接返回，不重试
 		return err
 	}
-	return err
+	return err // 达到最大重试次数后返回最后一次错误
 }
 
 // isConnectionError 判断是否为网络连接相关错误
+// 通过检查错误信息中的关键词来识别连接问题
+// 返回布尔值表示是否是连接错误
 func isConnectionError(err error) bool {
 	errStr := err.Error()
 	return strings.Contains(errStr, "connection") ||
@@ -58,6 +69,12 @@ func isConnectionError(err error) bool {
 // ======== 字符串操作 ========
 
 // Set 设置键值对并指定过期时间
+// 参数:
+//   - key: Redis键名
+//   - value: 要存储的值，可以是任意类型
+//   - expiration: 过期时间，0表示永不过期
+//
+// 返回可能的错误
 func Set(key string, value interface{}, expiration time.Duration) error {
 	return executeWithRetry(func() error {
 		ctx, cancel := getContext()
@@ -66,7 +83,13 @@ func Set(key string, value interface{}, expiration time.Duration) error {
 	})
 }
 
-// Get 获取键值
+// Get 获取字符串类型的键值
+// 参数:
+//   - key: Redis键名
+//
+// 返回:
+//   - 字符串值
+//   - 可能的错误，键不存在时返回ErrKeyNotFound
 func Get(key string) (string, error) {
 	var val string
 	err := executeWithRetry(func() error {
@@ -87,20 +110,27 @@ func Get(key string) (string, error) {
 	return val, err
 }
 
-// GetObj 获取对象并反序列化
+// GetObj 获取JSON对象并反序列化到指定结构
+// 参数:
+//   - key: Redis键名
+//   - obj: 接收反序列化结果的对象指针
+//
+// 返回可能的错误，键不存在时返回ErrKeyNotFound
 func GetObj(key string, obj interface{}) error {
-	ctx, cancel := getContext()
-	defer cancel()
+	return executeWithRetry(func() error {
+		ctx, cancel := getContext()
+		defer cancel()
 
-	val, err := Client.Get(ctx, key).Result()
-	if err == redis.Nil {
-		return ErrKeyNotFound
-	}
-	if err != nil {
-		return err
-	}
+		val, err := Client.Get(ctx, key).Result()
+		if err == redis.Nil {
+			return ErrKeyNotFound
+		}
+		if err != nil {
+			return err
+		}
 
-	return json.Unmarshal([]byte(val), obj)
+		return json.Unmarshal([]byte(val), obj)
+	})
 }
 
 // SetObj 设置对象（序列化后存储）
