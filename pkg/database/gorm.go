@@ -160,12 +160,6 @@ func Close() error {
 	return nil
 }
 
-// CloseGormDB 关闭GORM数据库连接
-// 已废弃: 请使用 Close() 函数代替，保留此函数是为了向后兼容
-func CloseGormDB() error {
-	return Close()
-}
-
 // CheckGormDBHealth 检查GORM数据库健康状态
 func CheckGormDBHealth() (map[string]interface{}, error) {
 	// 检查数据库是否已初始化

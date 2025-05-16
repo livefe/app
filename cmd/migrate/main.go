@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("数据库连接失败: %v", err)
 	}
-	defer database.CloseGormDB()
+	defer database.Close()
 
 	// 获取数据库连接
 	db := database.GetGormDB()
