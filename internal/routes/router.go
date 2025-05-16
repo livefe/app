@@ -48,11 +48,8 @@ func registerModuleRoutes(r *gin.Engine) {
 	// 社交动态模块路由
 	RegisterPostRoutes(r)
 
-	// 粉丝关注模块路由
-	RegisterUserFollowerRoutes(r)
-
-	// 好友关系模块路由
-	RegisterUserFriendRoutes(r)
+	// 用户关系模块路由（整合了粉丝关注和好友关系功能）
+	RegisterRelationRoutes(r)
 }
 
 // HealthCheck 处理健康检查请求

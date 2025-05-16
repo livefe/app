@@ -124,27 +124,35 @@ func (c *Container) GetUserService() service.UserService {
 	return svc.(service.UserService)
 }
 
-// GetUserFollowerService 获取粉丝关注服务实例（懒加载）
-func (c *Container) GetUserFollowerService() service.UserFollowerService {
-	svc := c.getOrCreateService("user_follower_service", func() interface{} {
-		return service.NewUserFollowerService(
+// GetRelationService 获取用户关系服务实例（懒加载）
+// 整合了粉丝关注和好友关系功能
+func (c *Container) GetRelationService() service.RelationService {
+	svc := c.getOrCreateService("relation_service", func() interface{} {
+		return service.NewRelationService(
 			c.GetUserFollowerRepository(),
-			c.GetUserRepository(),
-		)
-	})
-	return svc.(service.UserFollowerService)
-}
-
-// GetUserFriendService 获取好友关系服务实例（懒加载）
-func (c *Container) GetUserFriendService() service.UserFriendService {
-	svc := c.getOrCreateService("user_friend_service", func() interface{} {
-		return service.NewUserFriendService(
 			c.GetUserFriendRepository(),
 			c.GetUserRepository(),
 		)
 	})
-	return svc.(service.UserFriendService)
+	return svc.(service.RelationService)
 }
+
+// 注意：以下旧的服务接口已被移除，请使用GetRelationService
+// 如果需要这些服务，请在service包中定义相应接口
+
+/*
+// GetUserFollowerService 获取粉丝关注服务实例（懒加载）
+func (c *Container) GetUserFollowerService() service.UserFollowerService {
+	// 已废弃，请使用GetRelationService
+	return nil
+}
+
+// GetUserFriendService 获取好友关系服务实例（懒加载）
+func (c *Container) GetUserFriendService() service.UserFriendService {
+	// 已废弃，请使用GetRelationService
+	return nil
+}
+*/
 
 // GetPostService 获取动态服务实例（懒加载）
 func (c *Container) GetPostService() service.PostService {
