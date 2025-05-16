@@ -224,7 +224,7 @@ func setupGracefulShutdown(srv *http.Server) {
 // 确保资源释放的正确顺序，避免依赖问题
 func closeResources() {
 	// 关闭数据库连接
-	if err := database.CloseGormDB(); err != nil {
+	if err := database.Close(); err != nil {
 		fmt.Printf("关闭数据库连接失败: %v\n", err)
 	}
 

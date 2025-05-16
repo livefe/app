@@ -135,8 +135,9 @@ func GetGormDB() *gorm.DB {
 	return GormDB
 }
 
-// CloseGormDB 关闭GORM数据库连接
-func CloseGormDB() error {
+// Close 关闭GORM数据库连接
+// 推荐使用此函数关闭数据库连接，与其他资源关闭函数命名保持一致
+func Close() error {
 	if GormDB != nil {
 		// 正在关闭GORM数据库连接
 
@@ -157,6 +158,12 @@ func CloseGormDB() error {
 		return nil
 	}
 	return nil
+}
+
+// CloseGormDB 关闭GORM数据库连接
+// 已废弃: 请使用 Close() 函数代替，保留此函数是为了向后兼容
+func CloseGormDB() error {
+	return Close()
 }
 
 // CheckGormDBHealth 检查GORM数据库健康状态
