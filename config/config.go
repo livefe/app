@@ -9,18 +9,29 @@ import (
 	"github.com/subosito/gotenv"
 )
 
+// Config 包含所有应用配置
+
 // Config 应用配置结构体
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
-	SMS      SMSConfig      `mapstructure:"sms"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Scheduler SchedulerConfig `mapstructure:"scheduler"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	Logger    LoggerConfig    `mapstructure:"logger"`
+	SMS       SMSConfig       `mapstructure:"sms"`
 }
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
+	Port         int    `mapstructure:"port"`
+	Host         string `mapstructure:"host"`
+	ReadTimeout  string `mapstructure:"read_timeout"`
+	WriteTimeout string `mapstructure:"write_timeout"`
+}
+
+// SchedulerConfig 定时程序配置
+type SchedulerConfig struct {
 	Port         int    `mapstructure:"port"`
 	Host         string `mapstructure:"host"`
 	ReadTimeout  string `mapstructure:"read_timeout"`
@@ -122,6 +133,8 @@ func Init() error {
 		return fmt.Errorf("解析配置失败: %w", err)
 	}
 
+	// 配置初始化完成
+
 	return nil
 }
 
@@ -133,6 +146,11 @@ func GetConfig() *Config {
 // GetServerConfig 获取服务器配置
 func GetServerConfig() ServerConfig {
 	return config.Server
+}
+
+// GetSchedulerConfig 获取定时程序配置
+func GetSchedulerConfig() SchedulerConfig {
+	return config.Scheduler
 }
 
 // GetDatabaseConfig 获取数据库配置

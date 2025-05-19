@@ -80,9 +80,21 @@ func initAndStartScheduler() {
 	schedulerInstance = pkgscheduler.Init(pkgscheduler.WithRedisLock())
 
 	// 注册所有定时任务
-	if err := scheduler.RegisterTasks(schedulerInstance); err != nil {
-		logger.Error(context.Background(), "注册定时任务失败", zap.Error(err))
-		os.Exit(1)
+	ctx := context.Background()
+	for taskName, config := range scheduler.TaskConfigs {
+		// 创建注册选项，使用任务配置中的设置
+		options := pkgscheduler.RegisterOption{
+			RunImmediately: config.RunImmediately, // 使用配置中的立即执行设置
+			LockTimeout:    config.LockTimeout,    // 使用配置中的锁超时设置
+		}
+
+		// 使用选项注册任务
+		err := schedulerInstance.RegisterWithOptions(taskName, config.Spec, config.Handler, options)
+		if err != nil {
+			logger.Error(ctx, "注册定时任务失败", zap.String("task", taskName), zap.Error(err))
+			os.Exit(1)
+		}
+		logger.Info(ctx, "成功注册定时任务", zap.String("task", taskName), zap.String("spec", config.Spec))
 	}
 
 	// 启动定时任务调度器
@@ -99,7 +111,7 @@ func setupHTTPServer(cfg *config.Config) *http.Server {
 	setupRouter(router)
 
 	// 准备服务器地址
-	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port+1) // 使用不同端口避免与主服务冲突
+	serverAddr := fmt.Sprintf("%s:%d", cfg.Scheduler.Host, cfg.Scheduler.Port) // 使用Scheduler配置
 
 	// 创建HTTP服务器
 	srv := &http.Server{
@@ -117,6 +129,57 @@ func setupHTTPServer(cfg *config.Config) *http.Server {
 	}()
 
 	return srv
+}
+
+// setupGracefulShutdown 设置优雅关闭机制
+// 监听系统信号，确保在关闭前完成所有请求并释放资源
+func setupGracefulShutdown(srv *http.Server) {
+	// 创建一个接收系统信号的通道
+	quit := make(chan os.Signal, 1)
+	// 监听系统信号
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// 等待信号
+	<-quit
+	fmt.Println("正在关闭定时任务服务器...")
+
+	// 停止定时任务调度器
+	schedulerInstance.Stop()
+
+	// 创建一个超时上下文，等待现有请求完成
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 停止接受新的HTTP请求
+	if err := srv.Shutdown(ctx); err != nil {
+		fmt.Printf("服务器关闭异常: %v\n", err)
+	}
+	fmt.Println("HTTP服务已停止接受新请求")
+
+	// 按照依赖关系的相反顺序关闭资源
+	closeResources()
+
+	fmt.Println("定时任务服务器已安全关闭")
+	os.Exit(0)
+}
+
+// closeResources 按照依赖关系的相反顺序关闭所有资源
+// 确保资源释放的正确顺序，避免依赖问题
+func closeResources() {
+	// 关闭数据库连接
+	if err := database.Close(); err != nil {
+		fmt.Printf("关闭数据库连接失败: %v\n", err)
+	}
+
+	// 关闭Redis连接
+	if err := redis.Close(); err != nil {
+		fmt.Printf("关闭Redis连接失败: %v\n", err)
+	}
+
+	// 关闭日志系统
+	if err := logger.Close(); err != nil {
+		fmt.Printf("关闭日志系统失败: %v\n", err)
+	}
 }
 
 // setupRouter 设置HTTP路由
@@ -186,55 +249,4 @@ func handleRunTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": fmt.Sprintf("任务 %s 已手动触发执行", name),
 	})
-}
-
-// setupGracefulShutdown 设置优雅关闭机制
-// 监听系统信号，确保在关闭前完成所有请求并释放资源
-func setupGracefulShutdown(srv *http.Server) {
-	// 创建一个接收系统信号的通道
-	quit := make(chan os.Signal, 1)
-	// 监听系统信号
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// 等待信号
-	<-quit
-	fmt.Println("正在关闭定时任务服务器...")
-
-	// 停止定时任务调度器
-	schedulerInstance.Stop()
-
-	// 创建一个超时上下文，等待现有请求完成
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// 停止接受新的HTTP请求
-	if err := srv.Shutdown(ctx); err != nil {
-		fmt.Printf("服务器关闭异常: %v\n", err)
-	}
-	fmt.Println("HTTP服务已停止接受新请求")
-
-	// 按照依赖关系的相反顺序关闭资源
-	closeResources()
-
-	fmt.Println("定时任务服务器已安全关闭")
-	os.Exit(0)
-}
-
-// closeResources 按照依赖关系的相反顺序关闭所有资源
-// 确保资源释放的正确顺序，避免依赖问题
-func closeResources() {
-	// 关闭数据库连接
-	if err := database.Close(); err != nil {
-		fmt.Printf("关闭数据库连接失败: %v\n", err)
-	}
-
-	// 关闭Redis连接
-	if err := redis.Close(); err != nil {
-		fmt.Printf("关闭Redis连接失败: %v\n", err)
-	}
-
-	// 关闭日志系统
-	if err := logger.Close(); err != nil {
-		fmt.Printf("关闭日志系统失败: %v\n", err)
-	}
 }
