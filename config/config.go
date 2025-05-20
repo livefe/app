@@ -52,11 +52,15 @@ type DatabaseConfig struct {
 
 // RedisConfig Redis配置
 type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Password string `mapstructure:"password"`
-	DB       int    `mapstructure:"db"`
-	PoolSize int    `mapstructure:"pool_size"`
+	Host         string `mapstructure:"host"`
+	Port         int    `mapstructure:"port"`
+	Password     string `mapstructure:"password"`
+	DB           int    `mapstructure:"db"`
+	PoolSize     int    `mapstructure:"pool_size"`
+	MinIdleConns int    `mapstructure:"min_idle_conns"`
+	DialTimeout  string `mapstructure:"dial_timeout"`
+	ReadTimeout  string `mapstructure:"read_timeout"`
+	WriteTimeout string `mapstructure:"write_timeout"`
 }
 
 // JWTConfig JWT配置
