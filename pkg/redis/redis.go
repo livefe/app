@@ -86,20 +86,9 @@ func parseRedisConfig() (*RedisConfig, error) {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	// 解析超时时间配置
-	dialTimeout, err := time.ParseDuration(cfg.DialTimeout)
-	if err != nil {
-		return nil, fmt.Errorf("解析连接超时时间失败: %w", err)
-	}
-
-	readTimeout, err := time.ParseDuration(cfg.ReadTimeout)
-	if err != nil {
-		return nil, fmt.Errorf("解析读取超时时间失败: %w", err)
-	}
-
-	writeTimeout, err := time.ParseDuration(cfg.WriteTimeout)
-	if err != nil {
-		return nil, fmt.Errorf("解析写入超时时间失败: %w", err)
-	}
+	dialTimeout, _ := time.ParseDuration(cfg.DialTimeout)
+	readTimeout, _ := time.ParseDuration(cfg.ReadTimeout)
+	writeTimeout, _ := time.ParseDuration(cfg.WriteTimeout)
 
 	return &RedisConfig{
 		Addr:         addr,
