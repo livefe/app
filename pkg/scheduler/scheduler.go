@@ -120,11 +120,15 @@ func (s *Scheduler) RegisterWithOptions(name, spec string, handler TaskHandler, 
 				lockExpiration = 5 * time.Minute
 			}
 
+			// 创建分布式锁
+			lock := redis.NewLock(lockKey, lockExpiration)
+
 			// 尝试获取锁，添加随机延迟避免多个实例同时竞争
 			randDelay := time.Duration(rand.Intn(500)) * time.Millisecond
 			time.Sleep(randDelay)
 
-			success, err := s.acquireLock(ctx, lockKey, lockExpiration)
+			// 尝试获取锁
+			success, err := lock.TryAcquire()
 			if err != nil {
 				logger.Error(ctx, "获取分布式锁失败", zap.String("task", name), zap.Error(err))
 				return
@@ -133,7 +137,14 @@ func (s *Scheduler) RegisterWithOptions(name, spec string, handler TaskHandler, 
 				logger.Info(ctx, "任务正在其他节点执行，跳过", zap.String("task", name))
 				return
 			}
-			defer s.releaseLock(ctx, lockKey)
+			// 使用defer释放锁
+			defer func() {
+				if err := lock.Release(); err != nil {
+					logger.Error(ctx, "释放分布式锁失败", zap.String("task", name), zap.Error(err))
+				} else {
+					logger.Debug(ctx, "成功释放分布式锁", zap.String("task", name))
+				}
+			}()
 		}
 
 		// 执行任务
@@ -353,40 +364,5 @@ func (s *Scheduler) cleanupDeadLocks() {
 				logger.Info(ctx, "发现有效锁，保留不清理", zap.String("key", key), zap.Duration("ttl", ttl))
 			}
 		}
-	}
-}
-
-// 获取Redis分布式锁
-func (s *Scheduler) acquireLock(ctx context.Context, key string, expiration time.Duration) (bool, error) {
-	redisClient := redis.Client
-	if redisClient == nil {
-		return false, fmt.Errorf("Redis客户端未初始化")
-	}
-
-	// 尝试获取锁，使用SET NX命令
-	// 设置锁的值为当前时间戳，便于调试和监控
-	timestamp := time.Now().Format(time.RFC3339)
-	success, err := redisClient.SetNX(ctx, key, timestamp, expiration).Result()
-	if err != nil {
-		return false, fmt.Errorf("获取Redis锁失败: %w", err)
-	}
-
-	return success, nil
-}
-
-// 释放Redis分布式锁
-func (s *Scheduler) releaseLock(ctx context.Context, key string) {
-	redisClient := redis.Client
-	if redisClient == nil {
-		logger.Error(ctx, "释放锁失败: Redis客户端未初始化", zap.String("key", key))
-		return
-	}
-
-	// 删除锁
-	_, err := redisClient.Del(ctx, key).Result()
-	if err != nil {
-		logger.Error(ctx, "释放Redis锁失败", zap.String("key", key), zap.Error(err))
-	} else {
-		logger.Debug(ctx, "成功释放Redis锁", zap.String("key", key))
 	}
 }

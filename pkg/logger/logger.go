@@ -52,11 +52,8 @@ func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 
 // Init 初始化日志系统
 func Init() error {
-	// 获取配置，如果配置不存在则使用默认配置
+	// 获取配置
 	cfg := config.GetLoggerConfig()
-
-	// 应用默认配置值
-	applyDefaultConfig(&cfg)
 
 	// 确保日志路径是绝对路径
 	if !filepath.IsAbs(cfg.OutputPath) {
@@ -187,49 +184,6 @@ func Init() error {
 	SugaredLogger = logger.Sugar()
 
 	return nil
-}
-
-// applyDefaultConfig 应用默认配置值
-func applyDefaultConfig(cfg *config.LoggerConfig) {
-	// 默认日志级别
-	if cfg.Level == "" {
-		cfg.Level = InfoLevel
-	}
-
-	// 默认日志格式
-	if cfg.Format == "" {
-		cfg.Format = JSONFormat
-	}
-
-	// 默认输出路径
-	if cfg.OutputPath == "" {
-		cfg.OutputPath = "logs/app.log"
-	}
-
-	// 默认日志文件大小限制 (MB)
-	if cfg.MaxSize <= 0 {
-		cfg.MaxSize = 100
-	}
-
-	// 默认日志文件保留天数
-	if cfg.MaxAge <= 0 {
-		cfg.MaxAge = 30
-	}
-
-	// 默认日志文件备份数量
-	if cfg.MaxBackups <= 0 {
-		cfg.MaxBackups = 10
-	}
-
-	// 默认调用栈级别
-	if cfg.StacktraceLevel == "" {
-		cfg.StacktraceLevel = ErrorLevel
-	}
-
-	// 默认调用栈深度
-	if cfg.StacktraceDepth <= 0 {
-		cfg.StacktraceDepth = 10
-	}
 }
 
 // Close 关闭日志记录器
