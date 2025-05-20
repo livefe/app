@@ -15,42 +15,55 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// 定义上下文键
+// 上下文键常量，用于从上下文中提取标识信息
 const (
+	// RequestIDKey 请求ID的上下文键名
 	RequestIDKey = "request_id"
-	UserIDKey    = "userID"
+	// UserIDKey 用户ID的上下文键名
+	UserIDKey = "userID"
 )
 
-// 定义日志级别
+// 日志级别常量
 const (
+	// DebugLevel 调试级别
 	DebugLevel = "debug"
-	InfoLevel  = "info"
-	WarnLevel  = "warn"
+	// InfoLevel 信息级别
+	InfoLevel = "info"
+	// WarnLevel 警告级别
+	WarnLevel = "warn"
+	// ErrorLevel 错误级别
 	ErrorLevel = "error"
+	// FatalLevel 致命级别
 	FatalLevel = "fatal"
 )
 
-// 定义日志格式
+// 日志格式常量
 const (
-	JSONFormat    = "json"
+	// JSONFormat JSON格式输出
+	JSONFormat = "json"
+	// ConsoleFormat 控制台格式输出
 	ConsoleFormat = "console"
 )
 
-// 最大请求/响应体大小限制 (5MB)
+// MaxBodySize 最大请求/响应体大小限制 (5MB)
 const MaxBodySize = 5 * 1024 * 1024
 
-// Logger 全局日志实例
-var logger *zap.Logger
+// 全局日志实例
+var (
+	// logger 原始zap日志实例
+	logger *zap.Logger
+	// SugaredLogger 提供更便捷的API的sugar日志实例
+	SugaredLogger *zap.SugaredLogger
+)
 
-// SugaredLogger 提供更便捷的API
-var SugaredLogger *zap.SugaredLogger
-
-// 自定义时间编码器
+// timeEncoder 自定义时间编码器，格式化为"2006-01-02 15:04:05.000"格式
 func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
 }
 
 // Init 初始化日志系统
+// 根据配置创建日志记录器，设置日志级别、格式、输出路径等
+// 返回初始化过程中可能出现的错误
 func Init() error {
 	// 获取配置
 	cfg := config.GetLoggerConfig()
@@ -71,47 +84,10 @@ func Init() error {
 	}
 
 	// 配置日志级别
-	var level zapcore.Level
-	switch strings.ToLower(cfg.Level) {
-	case DebugLevel:
-		level = zapcore.DebugLevel
-	case InfoLevel:
-		level = zapcore.InfoLevel
-	case WarnLevel:
-		level = zapcore.WarnLevel
-	case ErrorLevel:
-		level = zapcore.ErrorLevel
-	case FatalLevel:
-		level = zapcore.FatalLevel
-	default:
-		level = zapcore.InfoLevel
-	}
+	level := getZapLevel(cfg.Level)
 
 	// 配置日志编码器
-	var encoder zapcore.Encoder
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "timestamp",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		FunctionKey:    zapcore.OmitKey,
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     timeEncoder,
-		EncodeDuration: zapcore.MillisDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-
-	switch strings.ToLower(cfg.Format) {
-	case JSONFormat:
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	case ConsoleFormat:
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	default:
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	}
+	encoder := createEncoder(cfg.Format)
 
 	// 配置日志轮转
 	lumberJackLogger := &lumberjack.Logger{
@@ -123,49 +99,25 @@ func Init() error {
 	}
 
 	// 创建输出目标
-	var writeSyncer zapcore.WriteSyncer
-
-	// 检查是否需要同时输出到控制台
-	if cfg.Console {
-		consoleSyncer := zapcore.AddSync(os.Stdout)
-		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(lumberJackLogger), consoleSyncer)
-	} else {
-		writeSyncer = zapcore.AddSync(lumberJackLogger)
-	}
+	writeSyncer := createWriteSyncer(lumberJackLogger, cfg.Console)
 
 	// 创建核心
-	core := zapcore.NewCore(
-		encoder,
-		writeSyncer,
-		level,
-	)
+	core := zapcore.NewCore(encoder, writeSyncer, level)
 
-	// 创建日志记录器
+	// 创建日志记录器选项
 	options := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(1),
 	}
 
 	// 配置调用栈
-	// 解析调用栈级别
-	var stacktraceLevel zapcore.Level
-	switch strings.ToLower(cfg.StacktraceLevel) {
-	case DebugLevel:
-		stacktraceLevel = zapcore.DebugLevel
-	case InfoLevel:
-		stacktraceLevel = zapcore.InfoLevel
-	case WarnLevel:
-		stacktraceLevel = zapcore.WarnLevel
-	case ErrorLevel:
-		stacktraceLevel = zapcore.ErrorLevel
-	case FatalLevel:
-		stacktraceLevel = zapcore.FatalLevel
-	default:
-		stacktraceLevel = zapcore.ErrorLevel
-	}
-
-	// 根据配置决定是否启用调用栈
 	if cfg.EnableStacktrace {
+		// 解析调用栈级别
+		stacktraceLevel := getZapLevel(cfg.StacktraceLevel)
+		if stacktraceLevel == zapcore.InvalidLevel {
+			stacktraceLevel = zapcore.ErrorLevel
+		}
+
 		// 添加调用栈选项
 		options = append(options, zap.AddStacktrace(stacktraceLevel))
 
@@ -186,7 +138,62 @@ func Init() error {
 	return nil
 }
 
-// Close 关闭日志记录器
+// getZapLevel 将字符串日志级别转换为zap日志级别
+func getZapLevel(levelStr string) zapcore.Level {
+	switch strings.ToLower(levelStr) {
+	case DebugLevel:
+		return zapcore.DebugLevel
+	case InfoLevel:
+		return zapcore.InfoLevel
+	case WarnLevel:
+		return zapcore.WarnLevel
+	case ErrorLevel:
+		return zapcore.ErrorLevel
+	case FatalLevel:
+		return zapcore.FatalLevel
+	default:
+		return zapcore.InfoLevel
+	}
+}
+
+// createEncoder 根据格式创建日志编码器
+func createEncoder(format string) zapcore.Encoder {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "timestamp",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     timeEncoder,
+		EncodeDuration: zapcore.MillisDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+
+	switch strings.ToLower(format) {
+	case JSONFormat:
+		return zapcore.NewJSONEncoder(encoderConfig)
+	case ConsoleFormat:
+		return zapcore.NewConsoleEncoder(encoderConfig)
+	default:
+		return zapcore.NewJSONEncoder(encoderConfig)
+	}
+}
+
+// createWriteSyncer 创建日志输出同步器
+func createWriteSyncer(fileLogger *lumberjack.Logger, enableConsole bool) zapcore.WriteSyncer {
+	if enableConsole {
+		consoleSyncer := zapcore.AddSync(os.Stdout)
+		return zapcore.NewMultiWriteSyncer(zapcore.AddSync(fileLogger), consoleSyncer)
+	}
+	return zapcore.AddSync(fileLogger)
+}
+
+// Close 关闭日志记录器，确保所有日志都被写入
+// 返回同步过程中可能出现的错误
 func Close() error {
 	if logger != nil {
 		err := logger.Sync()
@@ -203,6 +210,7 @@ func Close() error {
 }
 
 // WithContext 从上下文中获取请求ID和用户ID，并添加到日志字段中
+// 返回带有上下文信息的日志记录器
 func WithContext(ctx context.Context) *zap.Logger {
 	if ctx == nil {
 		return logger.With(
@@ -235,6 +243,7 @@ func WithContext(ctx context.Context) *zap.Logger {
 }
 
 // WithContextS 从上下文中获取请求ID和用户ID，并添加到SugaredLogger字段中
+// 返回带有上下文信息的SugaredLogger
 func WithContextS(ctx context.Context) *zap.SugaredLogger {
 	return WithContext(ctx).Sugar()
 }
@@ -287,4 +296,84 @@ func Errorf(ctx context.Context, format string, args ...interface{}) {
 // Fatalf 记录致命级别日志（格式化）
 func Fatalf(ctx context.Context, format string, args ...interface{}) {
 	WithContextS(ctx).Fatalf(format, args...)
+}
+
+// String 创建字符串类型的日志字段
+func String(key string, val string) zap.Field {
+	return zap.String(key, val)
+}
+
+// Int 创建整数类型的日志字段
+func Int(key string, val int) zap.Field {
+	return zap.Int(key, val)
+}
+
+// Int64 创建int64类型的日志字段
+func Int64(key string, val int64) zap.Field {
+	return zap.Int64(key, val)
+}
+
+// Uint 创建uint类型的日志字段
+func Uint(key string, val uint) zap.Field {
+	return zap.Uint(key, val)
+}
+
+// Uint64 创建uint64类型的日志字段
+func Uint64(key string, val uint64) zap.Field {
+	return zap.Uint64(key, val)
+}
+
+// Float64 创建float64类型的日志字段
+func Float64(key string, val float64) zap.Field {
+	return zap.Float64(key, val)
+}
+
+// Bool 创建布尔类型的日志字段
+func Bool(key string, val bool) zap.Field {
+	return zap.Bool(key, val)
+}
+
+// Time 创建时间类型的日志字段
+func Time(key string, val time.Time) zap.Field {
+	return zap.Time(key, val)
+}
+
+// Duration 创建时间间隔类型的日志字段
+func Duration(key string, val time.Duration) zap.Field {
+	return zap.Duration(key, val)
+}
+
+// Err 创建错误类型的日志字段
+func Err(err error) zap.Field {
+	return zap.Error(err)
+}
+
+// Any 创建任意类型的日志字段
+func Any(key string, val interface{}) zap.Field {
+	return zap.Any(key, val)
+}
+
+// Reflect 创建通过反射序列化的日志字段
+func Reflect(key string, val interface{}) zap.Field {
+	return zap.Reflect(key, val)
+}
+
+// Namespace 创建命名空间
+func Namespace(key string) zap.Field {
+	return zap.Namespace(key)
+}
+
+// Array 创建数组类型的日志字段
+func Array(key string, val zapcore.ArrayMarshaler) zap.Field {
+	return zap.Array(key, val)
+}
+
+// Object 创建对象类型的日志字段
+func Object(key string, val zapcore.ObjectMarshaler) zap.Field {
+	return zap.Object(key, val)
+}
+
+// Stringer 创建实现了Stringer接口的日志字段
+func Stringer(key string, val fmt.Stringer) zap.Field {
+	return zap.Stringer(key, val)
 }

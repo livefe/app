@@ -100,25 +100,14 @@ func parseGormConfig() (*GormConfig, error) {
 		cfg.Port,
 		cfg.Name)
 
-	// 解析连接最大生存时间
-	connMaxLifetime, err := time.ParseDuration(cfg.ConnMaxLifetime)
-	if err != nil {
-		connMaxLifetime = time.Hour // 默认值为1小时
-		// 解析连接最大生存时间失败，使用默认值1小时
-	}
+	// 解析连接最大生存时间，直接使用配置值
+	connMaxLifetime, _ := time.ParseDuration(cfg.ConnMaxLifetime)
 
-	// 解析空闲连接最大生存时间
-	connMaxIdleTime, err := time.ParseDuration(cfg.ConnMaxIdleTime)
-	if err != nil {
-		connMaxIdleTime = time.Minute * 30 // 默认值为30分钟
-		// 解析空闲连接最大生存时间失败，使用默认值30分钟
-	}
+	// 解析空闲连接最大生存时间，直接使用配置值
+	connMaxIdleTime, _ := time.ParseDuration(cfg.ConnMaxIdleTime)
 
-	// 计算最大空闲连接数
-	maxIdleConns := cfg.MaxConnections / 4 // 空闲连接数设为最大连接数的1/4
-	if maxIdleConns < 2 {
-		maxIdleConns = 2 // 确保至少有2个空闲连接
-	}
+	// 计算最大空闲连接数，直接使用配置值计算
+	maxIdleConns := cfg.MaxConnections / 4
 
 	return &GormConfig{
 		DSN:             dsn,
@@ -126,7 +115,7 @@ func parseGormConfig() (*GormConfig, error) {
 		MaxIdleConns:    maxIdleConns,
 		ConnMaxLifetime: connMaxLifetime,
 		ConnMaxIdleTime: connMaxIdleTime,
-		LogLevel:        logger.Silent, // 静默日志级别
+		LogLevel:        logger.Silent,
 	}, nil
 }
 
