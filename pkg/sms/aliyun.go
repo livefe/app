@@ -14,8 +14,7 @@ import (
 	"github.com/alibabacloud-go/tea/tea"
 )
 
-// AliyunSMSProvider 阿里云短信服务提供商
-// 实现了SMSProvider接口
+// AliyunSMSProvider 阿里云短信服务提供商，实现了SMSProvider接口
 type AliyunSMSProvider struct {
 	client *dysmsapi20170525.Client
 	config config.AliyunSMSConfig
@@ -39,7 +38,6 @@ func NewAliyunSMSProvider() (*AliyunSMSProvider, error) {
 }
 
 // createClient 初始化阿里云短信服务客户端
-// 使用配置文件中的阿里云短信服务配置
 func createClient(cfg config.AliyunSMSConfig) (*dysmsapi20170525.Client, error) {
 	// 工程代码泄露可能会导致 AccessKey 泄露，并威胁账号下所有资源的安全性
 	// 建议使用更安全的 STS 方式，更多鉴权访问方式请参见：https://help.aliyun.com/document_detail/378661.html
@@ -58,8 +56,7 @@ func createClient(cfg config.AliyunSMSConfig) (*dysmsapi20170525.Client, error) 
 	return dysmsapi20170525.NewClient(clientConfig)
 }
 
-// SendSMS 发送短信
-// 实现SMSProvider接口
+// SendSMS 发送短信，实现SMSProvider接口
 func (c *AliyunSMSProvider) SendSMS(req SMSRequest) (*SMSResponse, error) {
 	// 构建请求
 	sendSmsRequest := &dysmsapi20170525.SendSmsRequest{
