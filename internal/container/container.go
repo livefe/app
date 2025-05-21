@@ -27,7 +27,7 @@ var once sync.Once
 func GetInstance() *Container {
 	once.Do(func() {
 		instance = &Container{
-			db: database.GetGormDB(),
+			db: database.GetDB(),
 		}
 	})
 	return instance

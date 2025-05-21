@@ -26,7 +26,7 @@ func main() {
 	defer database.Close()
 
 	// 获取数据库连接
-	db := database.GetGormDB()
+	db := database.GetDB()
 	if db == nil {
 		log.Fatal("获取数据库连接失败")
 	}
