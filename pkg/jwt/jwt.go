@@ -14,17 +14,15 @@ import (
 
 // JWT错误定义
 var (
-	ErrTokenExpired     = errors.New("令牌已过期") // 令牌已过期
-	ErrTokenInvalid     = errors.New("无效的令牌") // 令牌无效
-	ErrTokenNotProvided = errors.New("未提供令牌") // 未提供令牌
+	ErrTokenExpired     = errors.New("令牌已过期")
+	ErrTokenInvalid     = errors.New("无效的令牌")
+	ErrTokenNotProvided = errors.New("未提供令牌")
 )
 
 // JWT认证相关常量
 const (
-	// AuthHeaderName 认证头名称
-	AuthHeaderName = "Authorization"
-	// AuthHeaderPrefix 认证头前缀
-	AuthHeaderPrefix = "Bearer"
+	AuthHeaderName   = "Authorization" // 认证头名称
+	AuthHeaderPrefix = "Bearer"        // 认证头前缀
 )
 
 // CustomClaims 自定义JWT声明结构体

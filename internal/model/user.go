@@ -6,10 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// User 用户模型
-// 存储系统用户的基本信息，包含用户的基础资料和账号状态
+// User 用户模型，存储系统用户的基本信息
 type User struct {
-	// 基本标识信息
 	ID uint `gorm:"primaryKey;comment:用户ID，主键" json:"id"`
 
 	// 账号信息
