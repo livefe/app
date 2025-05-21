@@ -21,8 +21,6 @@ var (
 
 // JWT认证相关常量
 const (
-	// TokenBlacklistPrefix 令牌黑名单前缀
-	TokenBlacklistPrefix = "token:blacklist:"
 	// AuthHeaderName 认证头名称
 	AuthHeaderName = "Authorization"
 	// AuthHeaderPrefix 认证头前缀

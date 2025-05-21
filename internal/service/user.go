@@ -277,7 +277,7 @@ func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.
 	}
 
 	// 将令牌加入黑名单，过期时间与令牌相同
-	blacklistKey := jwt.TokenBlacklistPrefix + req.Token
+	blacklistKey := constant.TokenBlacklistPrefix + req.Token
 	err = redis.Set(blacklistKey, "revoked", ttl)
 	if err != nil {
 		logger.Error(ctx, "将令牌加入黑名单失败",

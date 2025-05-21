@@ -24,6 +24,12 @@ const (
 	VerificationCodeLength = 6
 )
 
+// 用户认证相关常量
+const (
+	// TokenBlacklistPrefix 令牌黑名单前缀
+	TokenBlacklistPrefix = "token:blacklist:"
+)
+
 // 验证码类型
 const (
 	// VerificationTypeLogin 登录验证码类型

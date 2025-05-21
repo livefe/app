@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"app/internal/constant"
 	"app/pkg/jwt"
 	"app/pkg/redis"
 	"app/pkg/response"
@@ -31,7 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := parts[1]
 
-		blacklistKey := jwt.TokenBlacklistPrefix + tokenString
+		blacklistKey := constant.TokenBlacklistPrefix + tokenString
 		_, err := redis.Get(blacklistKey)
 		if err == nil {
 			response.Unauthorized(c, "令牌已失效，请重新登录", nil)
