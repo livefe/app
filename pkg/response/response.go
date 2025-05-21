@@ -1,4 +1,4 @@
-// Package response 提供统一的HTTP响应处理功能
+// Package response 提供统一的HTTP响应处理功能，确保API返回标准格式的响应。
 package response
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Response 统一API响应结构
+// Response 定义统一的API响应结构
 type Response struct {
 	Code      int         `json:"code"`            // HTTP状态码
 	Message   string      `json:"message"`         // 响应消息

@@ -20,25 +20,34 @@ import (
 
 // 错误常量定义
 var (
-	ErrUserNotFound     = errors.New(constant.ErrUserNotFound)     // 用户不存在错误
-	ErrInvalidCode      = errors.New(constant.ErrInvalidCode)      // 验证码无效错误
-	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed) // 注销失败错误
+	// ErrUserNotFound 用户不存在错误
+	ErrUserNotFound = errors.New(constant.ErrUserNotFound)
+	// ErrInvalidCode 验证码无效错误
+	ErrInvalidCode = errors.New(constant.ErrInvalidCode)
+	// ErrDeactivateFailed 注销失败错误
+	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed)
 )
 
 // 使用jwt包中的常量
+// 此处不再需要定义TokenBlacklistPrefix常量
 
 // UserService 用户服务接口
 type UserService interface {
 	// 认证方法
-	SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) // 发送验证码
-	VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)              // 验证码登录
-	Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error)                                           // 退出登录
+	// SendVerificationCode 发送验证码
+	SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error)
+	// VerificationCodeLogin 验证码登录
+	VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)
+	// Logout 退出登录
+	Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error)
 
 	// 查询方法
-	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error) // 获取用户信息
+	// GetUserInfo 获取用户信息
+	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
 
 	// 账号管理方法
-	DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error // 注销账号
+	// DeactivateAccount 注销账号
+	DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error
 }
 
 // userService 用户服务实现
@@ -55,11 +64,15 @@ func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRe
 	}
 }
 
+// 工具函数
+
 // generateVerificationCode 生成指定长度的随机验证码
 func generateVerificationCode(length int) string {
 	// 使用utils包中的函数生成随机数字
 	return utils.GenerateRandomDigits(length)
 }
+
+// 认证方法
 
 // SendVerificationCode 发送验证码
 func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) {

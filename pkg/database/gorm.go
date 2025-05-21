@@ -1,4 +1,4 @@
-// Package database 提供基于GORM框架的数据库连接和操作封装
+// Package database 提供数据库连接和操作的封装，基于GORM框架
 package database
 
 import (
@@ -12,20 +12,23 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// DB 数据库连接实例
+// DB 全局数据库连接实例
 var DB *gorm.DB
 
-// Init 初始化数据库连接
+// Init 初始化数据库连接并配置连接池
 func Init() error {
 	cfg := config.GetDatabaseConfig()
 
+	// 构建DSN
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
 
+	// 解析连接时间配置
 	connMaxLifetime, _ := time.ParseDuration(cfg.ConnMaxLifetime)
 	connMaxIdleTime, _ := time.ParseDuration(cfg.ConnMaxIdleTime)
 	maxIdleConns := cfg.MaxConnections / 4
 
+	// GORM配置
 	gormConfig := &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true, // 使用单数表名
@@ -33,25 +36,30 @@ func Init() error {
 		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束
 	}
 
+	// 连接数据库
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
 		return fmt.Errorf("连接数据库失败: %w", err)
 	}
 
+	// 获取底层SQL DB连接并配置连接池
 	sqlDB, err := db.DB()
 	if err != nil {
 		return fmt.Errorf("获取底层SQL连接失败: %w", err)
 	}
 
+	// 配置连接池
 	sqlDB.SetMaxOpenConns(cfg.MaxConnections)
 	sqlDB.SetMaxIdleConns(maxIdleConns)
 	sqlDB.SetConnMaxLifetime(connMaxLifetime)
 	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
 
+	// 测试连接
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("数据库连接测试失败: %w", err)
 	}
 
+	// 设置全局数据库实例
 	DB = db
 	return nil
 }

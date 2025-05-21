@@ -1,4 +1,6 @@
-// Package main 实现API服务器的入口点，负责初始化组件并提供优雅关闭机制
+// Package main 实现API服务器的入口点
+// 负责初始化配置、数据库连接、路由和HTTP服务器
+// 并提供优雅关闭机制确保资源正确释放
 package main
 
 import (
@@ -20,7 +22,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// main API服务器的入口函数
+// main 是API服务器的入口函数
+// 按顺序初始化各个组件，启动HTTP服务器，并设置优雅关闭机制
 func main() {
 	// 初始化应用程序组件
 	initComponents()
@@ -35,7 +38,8 @@ func main() {
 	setupGracefulShutdown(srv)
 }
 
-// initComponents 初始化所有应用程序组件
+// initComponents 按顺序初始化所有应用程序组件
+// 任何组件初始化失败都会导致程序退出
 func initComponents() {
 	// 初始化配置
 	if err := config.Init(); err != nil {
@@ -69,6 +73,7 @@ func initComponents() {
 }
 
 // setupHTTPServer 配置并启动HTTP服务器
+// 返回服务器实例以便后续优雅关闭
 func setupHTTPServer(cfg *config.Config) *http.Server {
 	// 初始化Gin引擎
 	router := gin.Default()

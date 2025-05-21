@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserHandler 用户处理器
+// UserHandler 用户处理器，负责处理用户相关的HTTP请求
 type UserHandler struct {
 	userService service.UserService
 }
@@ -20,6 +20,8 @@ type UserHandler struct {
 func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
+
+// 认证相关处理方法
 
 // SendVerificationCode 发送验证码
 func (h *UserHandler) SendVerificationCode(c *gin.Context) {
@@ -47,7 +49,7 @@ func (h *UserHandler) VerificationCodeLogin(c *gin.Context) {
 		return
 	}
 
-	// 调用服务进行验证码登录
+	// 调用服务进行验证码登录，传递Gin上下文
 	resp, err := h.userService.VerificationCodeLogin(c, &req)
 	if err != nil {
 		// 根据错误类型设置不同的状态码和错误消息

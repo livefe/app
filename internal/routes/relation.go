@@ -1,5 +1,4 @@
 // 用户关系相关路由定义
-// 包含关注、好友等社交关系功能的API路由
 package routes
 
 import (
@@ -11,9 +10,6 @@ import (
 )
 
 // RegisterRelationRoutes 注册用户关系相关路由
-// 配置用户关系模块的所有API路由，包括粉丝关注和好友关系
-// 参数:
-//   - r: Gin路由引擎实例
 func RegisterRelationRoutes(r *gin.Engine) {
 	// 从容器获取用户关系服务
 	container := container.GetInstance()
@@ -33,9 +29,6 @@ func RegisterRelationRoutes(r *gin.Engine) {
 }
 
 // registerRelationAuthRoutes 注册需要认证的用户关系相关路由
-// 参数:
-//   - group: 路由组
-//   - handler: 用户关系处理器
 func registerRelationAuthRoutes(group *gin.RouterGroup, handler *handler.RelationHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())

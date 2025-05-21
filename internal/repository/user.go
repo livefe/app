@@ -16,12 +16,16 @@ var (
 // UserRepository 用户仓库接口
 type UserRepository interface {
 	// 查询方法
-	FindByID(id uint) (*model.User, error)           // 根据ID查找用户
-	FindByMobile(mobile string) (*model.User, error) // 根据手机号查找用户
+	// FindByID 根据ID查找用户
+	FindByID(id uint) (*model.User, error)
+	// FindByMobile 根据手机号查找用户
+	FindByMobile(mobile string) (*model.User, error)
 
 	// 修改方法
-	Create(user *model.User) error // 创建用户
-	SoftDelete(id uint) error      // 软删除用户（注销账号）
+	// Create 创建用户
+	Create(user *model.User) error
+	// SoftDelete 软删除用户（注销账号）
+	SoftDelete(id uint) error
 }
 
 // userRepository 用户仓库实现
@@ -35,6 +39,8 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 		db: db,
 	}
 }
+
+// 查询方法
 
 // FindByID 根据ID查找用户
 func (r *userRepository) FindByID(id uint) (*model.User, error) {
@@ -61,6 +67,8 @@ func (r *userRepository) FindByMobile(mobile string) (*model.User, error) {
 	}
 	return &user, nil
 }
+
+// 修改方法
 
 // Create 创建用户
 func (r *userRepository) Create(user *model.User) error {

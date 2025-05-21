@@ -1,5 +1,4 @@
 // 社交动态相关路由定义
-// 包含动态发布、点赞、评论等功能的API路由
 package routes
 
 import (
@@ -11,9 +10,6 @@ import (
 )
 
 // RegisterPostRoutes 注册社交动态相关路由
-// 配置社交动态模块的所有API路由
-// 参数:
-//   - r: Gin路由引擎实例
 func RegisterPostRoutes(r *gin.Engine) {
 	// 从容器获取动态服务
 	container := container.GetInstance()
@@ -33,9 +29,6 @@ func RegisterPostRoutes(r *gin.Engine) {
 }
 
 // registerPostAuthRoutes 注册需要认证的动态相关路由
-// 参数:
-//   - group: 路由组
-//   - handler: 动态处理器
 func registerPostAuthRoutes(group *gin.RouterGroup, handler *handler.PostHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())
