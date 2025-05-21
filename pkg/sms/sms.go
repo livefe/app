@@ -2,6 +2,8 @@
 // 支持多种短信服务提供商，当前实现了阿里云短信服务
 package sms
 
+import "fmt"
+
 // SMSProvider 短信服务提供商接口
 // 所有短信服务提供商实现都需要实现此接口，便于扩展其他短信服务
 type SMSProvider interface {
@@ -55,17 +57,51 @@ func (c *SMSClient) SendSMS(request SMSRequest) (*SMSResponse, error) {
 	return c.provider.SendSMS(request)
 }
 
-// GetSMSClient 获取默认的短信客户端
-// 当前默认使用阿里云短信服务，未来可扩展为根据配置选择不同服务商
+// ProviderType 短信服务提供商类型
+type ProviderType string
+
+// 支持的短信服务提供商类型
+const (
+	AliyunProvider ProviderType = "aliyun" // 阿里云短信服务
+	// 未来可以添加更多服务商
+	// TencentProvider ProviderType = "tencent" // 腾讯云短信服务
+	// AWSProvider     ProviderType = "aws"     // AWS SNS短信服务
+)
+
+// GetSMSClient 获取短信客户端
+// 根据提供的服务商类型返回对应的短信客户端实例
+// 参数:
+//   - providerType: 短信服务提供商类型，默认为阿里云
 // 返回:
 //   - 短信客户端指针
 //   - 可能的错误
-func GetSMSClient() (*SMSClient, error) {
-	// 创建阿里云短信服务提供商
-	provider, err := NewAliyunSMSProvider()
+func GetSMSClient(providerType ...ProviderType) (*SMSClient, error) {
+	// 默认使用阿里云短信服务
+	pType := AliyunProvider
+	if len(providerType) > 0 && providerType[0] != "" {
+		pType = providerType[0]
+	}
+
+	// 根据提供商类型创建对应的服务提供商
+	var provider SMSProvider
+	var err error
+
+	switch pType {
+	case AliyunProvider:
+		provider, err = NewAliyunSMSProvider()
+	// 未来可以添加更多服务商的支持
+	// case TencentProvider:
+	// 	provider, err = NewTencentSMSProvider()
+	// case AWSProvider:
+	// 	provider, err = NewAWSSMSProvider()
+	default:
+		return nil, fmt.Errorf("不支持的短信服务提供商类型: %s", pType)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	// 创建并返回短信客户端
 	return NewSMSClient(provider), nil
 }

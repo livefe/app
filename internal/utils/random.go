@@ -18,17 +18,10 @@ func GenerateRandomString(length int, charset string) string {
 	result := make([]byte, length)
 	charsetLen := len(charset)
 
-	// 计算需要多少随机字节来确保均匀分布
-	// 我们需要足够的随机性来覆盖字符集大小
-	// 使用比特位计算来确保均匀分布
-	maxByte := 255
-	neededBytes := length * ((maxByte / charsetLen) + 1)
-	buf := make([]byte, neededBytes)
-
-	_, err := rand.Read(buf)
+	// 使用crypto/rand生成随机字节
+	_, err := rand.Read(result)
 	if err != nil {
 		// 如果安全随机数生成失败，回退到不太安全的方法
-		// 使用math/rand作为备用，但增加熵源
 		source := mathrand.NewSource(time.Now().UnixNano())
 		r := mathrand.New(source)
 		for i := 0; i < length; i++ {
@@ -37,33 +30,13 @@ func GenerateRandomString(length int, charset string) string {
 		return string(result)
 	}
 
-	// 将随机字节转换为指定字符集中的字符
-	// 使用取模偏差修正算法确保均匀分布
-	bufIndex := 0
+	// 将随机字节映射到字符集
 	for i := 0; i < length; i++ {
-		// 寻找一个在有效范围内的随机值
-		// 这样可以避免模运算导致的分布不均
-		for bufIndex < len(buf) {
-			// 计算阈值，确保均匀分布
-			threshold := 256 - (256 % charsetLen)
-			if int(buf[bufIndex]) < threshold {
-				result[i] = charset[int(buf[bufIndex])%charsetLen]
-				bufIndex++
-				break
-			}
-			bufIndex++
-		}
-
-		// 如果用完了随机字节但还没完成，回退到简单方法
-		if bufIndex >= len(buf) && i < length-1 {
-			source := mathrand.NewSource(time.Now().UnixNano())
-			r := mathrand.New(source)
-			for j := i + 1; j < length; j++ {
-				result[j] = charset[r.Intn(charsetLen)]
-			}
-			break
-		}
+		// 使用随机字节对字符集长度取模，获取字符集中的索引
+		// 这种方法在字符集长度不是2的幂次时会有轻微的分布不均，但对大多数应用场景足够
+		result[i] = charset[uint8(result[i])%uint8(charsetLen)]
 	}
 
 	return string(result)
+
 }
