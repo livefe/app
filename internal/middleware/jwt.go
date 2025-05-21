@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"app/internal/constant"
 	"app/pkg/jwt"
 	"app/pkg/redis"
 	"app/pkg/response"
@@ -16,7 +15,7 @@ import (
 // AuthMiddleware 创建JWT认证中间件，验证请求中的令牌并提取用户信息
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader(constant.AuthHeaderName)
+		authHeader := c.GetHeader(jwt.AuthHeaderName)
 		if authHeader == "" {
 			response.Unauthorized(c, "未提供授权令牌", jwt.ErrTokenNotProvided)
 			c.Abort()
@@ -24,7 +23,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == constant.AuthHeaderPrefix) {
+		if !(len(parts) == 2 && parts[0] == jwt.AuthHeaderPrefix) {
 			response.Unauthorized(c, "无效的授权格式", nil)
 			c.Abort()
 			return
@@ -32,7 +31,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := parts[1]
 
-		blacklistKey := constant.TokenBlacklistPrefix + tokenString
+		blacklistKey := jwt.TokenBlacklistPrefix + tokenString
 		_, err := redis.Get(blacklistKey)
 		if err == nil {
 			response.Unauthorized(c, "令牌已失效，请重新登录", nil)

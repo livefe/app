@@ -28,11 +28,8 @@ var (
 	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed)
 )
 
-// 常量定义
-const (
-	// TokenBlacklistPrefix 令牌黑名单前缀
-	TokenBlacklistPrefix = constant.TokenBlacklistPrefix
-)
+// 使用jwt包中的常量
+// 此处不再需要定义TokenBlacklistPrefix常量
 
 // UserService 用户服务接口
 type UserService interface {
@@ -280,7 +277,7 @@ func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.
 	}
 
 	// 将令牌加入黑名单，过期时间与令牌相同
-	blacklistKey := TokenBlacklistPrefix + req.Token
+	blacklistKey := jwt.TokenBlacklistPrefix + req.Token
 	err = redis.Set(blacklistKey, "revoked", ttl)
 	if err != nil {
 		logger.Error(ctx, "将令牌加入黑名单失败",
