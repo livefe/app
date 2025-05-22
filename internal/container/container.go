@@ -5,6 +5,7 @@ import (
 	"app/internal/repository"
 	"app/internal/service"
 	"app/pkg/database"
+	"fmt"
 	"sync"
 
 	"gorm.io/gorm"
@@ -107,6 +108,14 @@ func (c *Container) GetPostCommentRepository() repository.PostCommentRepository 
 	return repo.(repository.PostCommentRepository)
 }
 
+// GetPostImageRepository 返回动态图片仓库实例
+func (c *Container) GetPostImageRepository() repository.PostImageRepository {
+	repo := c.getOrCreateRepository("post_image_repository", func() interface{} {
+		return repository.NewPostImageRepository(c.db)
+	})
+	return repo.(repository.PostImageRepository)
+}
+
 // ==================== 服务实例获取方法 ====================
 
 // GetUserService 返回用户服务实例
@@ -115,6 +124,7 @@ func (c *Container) GetUserService() service.UserService {
 		return service.NewUserService(
 			c.GetUserRepository(),
 			c.GetSMSRepository(),
+			c.GetImageService(),
 		)
 	})
 	return svc.(service.UserService)
@@ -140,7 +150,24 @@ func (c *Container) GetPostService() service.PostService {
 			c.GetPostRepository(),
 			c.GetPostCommentRepository(),
 			c.GetUserRepository(),
+			c.GetPostImageRepository(),
+			c.GetImageService(),
 		)
 	})
 	return svc.(service.PostService)
+}
+
+// GetImageService 返回图片服务实例
+func (c *Container) GetImageService() service.ImageService {
+	svc := c.getOrCreateService("image_service", func() interface{} {
+		imageService, err := service.NewImageService(
+			c.GetPostImageRepository(),
+			c.GetUserRepository(),
+		)
+		if err != nil {
+			panic(fmt.Sprintf("创建图片服务失败: %v", err))
+		}
+		return imageService
+	})
+	return svc.(service.ImageService)
 }

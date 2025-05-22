@@ -57,3 +57,15 @@ sms:  # 短信服务配置
     sign_name: ""  # 短信签名
     templates:  # 短信模板代码配置
       verification_code: "SMS_154950909"  # 验证码短信模板代码
+
+cos:  # 对象存储服务配置
+  tencent:  # 腾讯云对象存储服务配置
+    secret_id: ""  # 腾讯云访问密钥ID
+    secret_key: ""  # 腾讯云访问密钥密钥
+    region: "ap-guangzhou"  # 存储桶所在地域，默认广州
+    default_bucket: "app-bucket"  # 默认存储桶名称
+    use_domain_map: true  # 是否启用自定义域名映射
+    buckets:              # 多桶配置，key为桶名称，value为自定义域名
+      default-bucket-1234567890: "cdn.example.com"  # 默认桶的自定义域名
+      images-bucket-1234567890: "img.example.com"   # 图片桶的自定义域名
+      videos-bucket-1234567890: "video.example.com" # 视频桶的自定义域名

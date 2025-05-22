@@ -15,8 +15,11 @@ type Post struct {
 
 	// 内容信息
 	Content    string `gorm:"size:2000;comment:动态内容" json:"content"`
-	Images     string `gorm:"size:1000;comment:图片URL，多个以逗号分隔" json:"images"`
+	Images     string `gorm:"size:1000;comment:图片URL，多个以逗号分隔（兼容旧数据）" json:"images"`
 	Visibility int    `gorm:"type:smallint;default:1;comment:可见性：1-公开，2-仅好友，3-私密" json:"visibility"`
+
+	// 关联信息
+	PostImages []PostImage `gorm:"foreignKey:PostID" json:"-"` // 关联的图片列表
 
 	// 统计信息
 	Likes    int `gorm:"default:0;comment:点赞数" json:"likes"`

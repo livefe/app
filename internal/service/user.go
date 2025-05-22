@@ -44,6 +44,8 @@ type UserService interface {
 	// 查询方法
 	// GetUserInfo 获取用户信息
 	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
+	// UpdateProfile 更新用户资料
+	UpdateProfile(ctx context.Context, req *dto.UpdateProfileRequest, userID uint) (*dto.UserProfileResponse, error)
 
 	// 账号管理方法
 	// DeactivateAccount 注销账号
@@ -52,15 +54,21 @@ type UserService interface {
 
 // userService 用户服务实现
 type userService struct {
-	userRepo repository.UserRepository
-	smsRepo  repository.SMSRepository
+	userRepo     repository.UserRepository
+	smsRepo      repository.SMSRepository
+	imageService ImageService
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(userRepo repository.UserRepository, smsRepo repository.SMSRepository) UserService {
+func NewUserService(
+	userRepo repository.UserRepository,
+	smsRepo repository.SMSRepository,
+	imageService ImageService,
+) UserService {
 	return &userService{
-		userRepo: userRepo,
-		smsRepo:  smsRepo,
+		userRepo:     userRepo,
+		smsRepo:      smsRepo,
+		imageService: imageService,
 	}
 }
 
@@ -401,4 +409,68 @@ func (s *userService) DeactivateAccount(ctx context.Context, req *dto.Deactivate
 		logger.String("mobile", user.Mobile))
 
 	return nil
+}
+
+// UpdateProfile 更新用户资料
+func (s *userService) UpdateProfile(ctx context.Context, req *dto.UpdateProfileRequest, userID uint) (*dto.UserProfileResponse, error) {
+	// 记录开始处理请求的日志
+	logger.Info(ctx, "开始更新用户资料", logger.Uint("user_id", userID))
+
+	// 查找用户
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrRecordNotFound) {
+			logger.Warn(ctx, "用户不存在", logger.Uint("user_id", userID))
+			return nil, ErrUserNotFound
+		}
+		logger.Error(ctx, "查询用户失败",
+			logger.Uint("user_id", userID),
+			logger.Err(err))
+		return nil, fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 更新昵称
+	if req.Nickname != "" {
+		user.Nickname = req.Nickname
+	}
+
+	// 处理头像上传
+	if req.AvatarData != "" {
+		// 解析Base64图片数据
+		reader, filename, _, err := utils.ParseBase64Image(req.AvatarData)
+		if err != nil {
+			logger.Error(ctx, "解析头像数据失败",
+				logger.Uint("user_id", userID),
+				logger.Err(err))
+			return nil, fmt.Errorf("解析头像数据失败: %w", err)
+		}
+
+		// 上传头像到COS
+		avatarURL, err := s.imageService.UploadAvatar(ctx, userID, reader, filename)
+		if err != nil {
+			logger.Error(ctx, "上传头像失败",
+				logger.Uint("user_id", userID),
+				logger.Err(err))
+			return nil, fmt.Errorf("上传头像失败: %w", err)
+		}
+
+		// 头像URL已在UploadAvatar方法中更新到用户记录
+		logger.Info(ctx, "头像上传成功",
+			logger.Uint("user_id", userID),
+			logger.String("avatar_url", avatarURL))
+	}
+
+	// 构建响应
+	response := &dto.UserProfileResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Nickname: user.Nickname,
+		Mobile:   user.Mobile,
+		Avatar:   user.Avatar,
+	}
+
+	// 记录成功日志
+	logger.Info(ctx, "更新用户资料成功", logger.Uint("user_id", userID))
+
+	return response, nil
 }

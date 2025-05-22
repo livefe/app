@@ -4,11 +4,11 @@ import "time"
 
 // 社交动态相关DTO
 
-// CreatePostRequest 创建社交动态请求
+// CreatePostRequest 创建动态请求
 type CreatePostRequest struct {
-	Content    string `json:"content" binding:"required" validate:"required,max=2000"`
-	Images     string `json:"images" validate:"max=1000"`
-	Visibility int    `json:"visibility" binding:"required" validate:"required,oneof=1 2 3"`
+	Content    string   `json:"content" validate:"required,max=1000"` // 动态内容
+	ImageData  []string `json:"image_data"`                           // Base64编码的图片数据
+	Visibility int      `json:"visibility" validate:"min=0,max=2"`    // 可见性：0-公开，1-仅关注者可见，2-仅自己可见
 }
 
 // CreatePostResponse 创建动态响应

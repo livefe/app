@@ -41,6 +41,7 @@ func main() {
 		&model.UserFriend{},
 		&model.Post{},
 		&model.PostComment{},
+		&model.PostImage{},
 		// 在此处添加其他模型
 	}
 

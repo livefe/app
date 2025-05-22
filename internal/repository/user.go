@@ -24,6 +24,8 @@ type UserRepository interface {
 	// 修改方法
 	// Create 创建用户
 	Create(user *model.User) error
+	// Update 更新用户信息
+	Update(user *model.User) error
 	// SoftDelete 软删除用户（注销账号）
 	SoftDelete(id uint) error
 }
@@ -73,6 +75,18 @@ func (r *userRepository) FindByMobile(mobile string) (*model.User, error) {
 // Create 创建用户
 func (r *userRepository) Create(user *model.User) error {
 	return r.db.Create(user).Error
+}
+
+// Update 更新用户信息
+func (r *userRepository) Update(user *model.User) error {
+	result := r.db.Save(user)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+	return nil
 }
 
 // SoftDelete 软删除用户（注销账号）

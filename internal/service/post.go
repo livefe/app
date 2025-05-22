@@ -4,9 +4,12 @@ import (
 	"app/internal/dto"
 	"app/internal/model"
 	"app/internal/repository"
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -27,9 +30,11 @@ type PostService interface {
 
 // postService 动态服务实现
 type postService struct {
-	postRepo    repository.PostRepository
-	commentRepo repository.PostCommentRepository
-	userRepo    repository.UserRepository
+	postRepo      repository.PostRepository
+	commentRepo   repository.PostCommentRepository
+	userRepo      repository.UserRepository
+	postImageRepo repository.PostImageRepository
+	imageService  ImageService
 }
 
 // NewPostService 创建动态服务实例
@@ -37,11 +42,15 @@ func NewPostService(
 	postRepo repository.PostRepository,
 	commentRepo repository.PostCommentRepository,
 	userRepo repository.UserRepository,
+	postImageRepo repository.PostImageRepository,
+	imageService ImageService,
 ) PostService {
 	return &postService{
-		postRepo:    postRepo,
-		commentRepo: commentRepo,
-		userRepo:    userRepo,
+		postRepo:      postRepo,
+		commentRepo:   commentRepo,
+		userRepo:      userRepo,
+		postImageRepo: postImageRepo,
+		imageService:  imageService,
 	}
 }
 
@@ -51,15 +60,50 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 	post := &model.Post{
 		UserID:     userID,
 		Content:    req.Content,
-		Images:     req.Images,
 		Visibility: req.Visibility, // 使用dto中的可见性值，对应constant.Visibility类型
 		Likes:      0,
 		Comments:   0,
 	}
 
+	// 保存动态基本信息
 	err := s.postRepo.CreatePost(post)
 	if err != nil {
 		return nil, fmt.Errorf("创建动态失败: %w", err)
+	}
+
+	// 处理图片上传
+	var imageURLs []string
+
+	// 处理Base64编码的图片数据
+	if len(req.ImageData) > 0 {
+		for i, imgData := range req.ImageData {
+			// 解码Base64数据
+			data, err := base64.StdEncoding.DecodeString(imgData)
+			if err != nil {
+				continue // 跳过无效的图片数据
+			}
+
+			// 创建读取器
+			reader := bytes.NewReader(data)
+
+			// 上传图片到COS
+			filename := fmt.Sprintf("post_%d_image_%d.jpg", post.ID, i)
+			postImage, err := s.imageService.UploadPostImage(ctx, post.ID, userID, reader, filename, int64(len(data)))
+			if err != nil {
+				fmt.Printf("上传图片失败: %v\n", err)
+				continue // 跳过上传失败的图片
+			}
+
+			// 添加图片URL到列表
+			imageURLs = append(imageURLs, postImage.URL)
+		}
+
+		// 更新动态的图片字段（保留兼容字段但只通过COS上传）
+		if len(imageURLs) > 0 {
+			post.Images = strings.Join(imageURLs, ",")
+			// 更新动态记录
+			s.postRepo.UpdatePost(post)
+		}
 	}
 
 	return &dto.CreatePostResponse{
@@ -98,13 +142,28 @@ func (s *postService) GetPosts(ctx context.Context, req *dto.GetPostsRequest, us
 			continue // 跳过获取失败的用户
 		}
 
+		// 获取动态图片
+		var images string
+		// 从图片关联中获取
+		postImages, err := s.postImageRepo.GetPostImages(post.ID)
+		if err == nil && len(postImages) > 0 {
+			imageURLs := make([]string, len(postImages))
+			for i, img := range postImages {
+				imageURLs[i] = img.URL
+			}
+			images = strings.Join(imageURLs, ",")
+		} else if post.Images != "" {
+			// 兼容旧数据，但这部分代码将随着数据迁移逐渐不再需要
+			images = post.Images
+		}
+
 		postList = append(postList, dto.PostDetail{
 			ID:        post.ID,
 			UserID:    post.UserID,
 			Nickname:  user.Nickname,
 			Avatar:    user.Avatar,
 			Content:   post.Content,
-			Images:    post.Images,
+			Images:    images,
 			Likes:     post.Likes,
 			Comments:  post.Comments,
 			CreatedAt: post.CreatedAt,

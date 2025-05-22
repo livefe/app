@@ -21,6 +21,10 @@ type User struct {
 	Nickname string `gorm:"size:50;comment:用户昵称，显示名称" json:"nickname"`
 	Avatar   string `gorm:"size:255;comment:用户头像URL" json:"avatar"`
 
+	// 头像存储信息
+	AvatarObjectKey string `gorm:"size:255;comment:头像在对象存储中的键名" json:"avatar_object_key"`
+	AvatarBucket    string `gorm:"size:100;comment:头像存储桶名称" json:"avatar_bucket"`
+
 	// 状态信息
 	Status int `gorm:"type:smallint;default:1;comment:用户状态：1-正常，0-禁用" json:"status"`
 

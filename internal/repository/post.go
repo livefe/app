@@ -17,6 +17,7 @@ type PostRepository interface {
 
 	// 修改方法
 	CreatePost(post *model.Post) error
+	UpdatePost(post *model.Post) error
 	IncrementPostLikes(postID uint) error
 	IncrementPostComments(postID uint) error
 }
@@ -150,6 +151,11 @@ func (r *postRepository) CreatePost(post *model.Post) error {
 // IncrementPostLikes 增加动态点赞数
 func (r *postRepository) IncrementPostLikes(postID uint) error {
 	return r.db.Model(&model.Post{}).Where("id = ?", postID).Update("likes", gorm.Expr("likes + ?", 1)).Error
+}
+
+// UpdatePost 更新动态信息
+func (r *postRepository) UpdatePost(post *model.Post) error {
+	return r.db.Save(post).Error
 }
 
 // IncrementPostComments 增加动态评论数

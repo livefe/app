@@ -20,6 +20,7 @@ type Config struct {
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	Logger    LoggerConfig    `mapstructure:"logger"`
 	SMS       SMSConfig       `mapstructure:"sms"`
+	COS       COSConfig       `mapstructure:"cos"`
 }
 
 // ServerConfig 服务器配置
@@ -97,6 +98,21 @@ type AliyunSMSConfig struct {
 	Endpoint        string            `mapstructure:"endpoint"`
 	SignName        string            `mapstructure:"sign_name"`
 	Templates       map[string]string `mapstructure:"templates"` // 短信模板代码映射
+}
+
+// COSConfig 对象存储服务配置
+type COSConfig struct {
+	Tencent TencentCOSConfig `mapstructure:"tencent"`
+}
+
+// TencentCOSConfig 腾讯云对象存储服务配置
+type TencentCOSConfig struct {
+	SecretID      string            `mapstructure:"secret_id"`
+	SecretKey     string            `mapstructure:"secret_key"`
+	Region        string            `mapstructure:"region"`
+	DefaultBucket string            `mapstructure:"default_bucket"`
+	Buckets       map[string]string `mapstructure:"buckets"`        // 多桶配置，key为桶名称，value为自定义域名
+	UseDomainMap  bool              `mapstructure:"use_domain_map"` // 是否使用自定义域名映射
 }
 
 var config *Config
@@ -180,4 +196,9 @@ func GetLoggerConfig() LoggerConfig {
 // GetSMSConfig 获取短信服务配置
 func GetSMSConfig() SMSConfig {
 	return config.SMS
+}
+
+// GetCOSConfig 获取对象存储服务配置
+func GetCOSConfig() COSConfig {
+	return config.COS
 }
