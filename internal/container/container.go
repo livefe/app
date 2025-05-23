@@ -2,6 +2,7 @@
 package container
 
 import (
+	"app/internal/handler"
 	"app/internal/repository"
 	"app/internal/service"
 	"app/pkg/database"
@@ -163,6 +164,7 @@ func (c *Container) GetImageService() service.ImageService {
 		imageService, err := service.NewImageService(
 			c.GetPostImageRepository(),
 			c.GetUserRepository(),
+			c.GetPostRepository(),
 		)
 		if err != nil {
 			panic(fmt.Sprintf("创建图片服务失败: %v", err))
@@ -170,4 +172,26 @@ func (c *Container) GetImageService() service.ImageService {
 		return imageService
 	})
 	return svc.(service.ImageService)
+}
+
+// ==================== 处理器实例获取方法 ====================
+
+// GetUserHandler 返回用户处理器实例
+func (c *Container) GetUserHandler() *handler.UserHandler {
+	return handler.NewUserHandler(c.GetUserService())
+}
+
+// GetPostHandler 返回动态处理器实例
+func (c *Container) GetPostHandler() *handler.PostHandler {
+	return handler.NewPostHandler(c.GetPostService())
+}
+
+// GetRelationHandler 返回用户关系处理器实例
+func (c *Container) GetRelationHandler() *handler.RelationHandler {
+	return handler.NewRelationHandler(c.GetRelationService())
+}
+
+// GetImageHandler 返回图片处理器实例
+func (c *Container) GetImageHandler() *handler.ImageHandler {
+	return handler.NewImageHandler(c.GetImageService(), c.GetPostService())
 }
