@@ -39,6 +39,4 @@ func registerPostAuthRoutes(group *gin.RouterGroup, postHandler *handler.PostHan
 	authGroup.POST("/like", postHandler.LikePost)                // 点赞动态
 	authGroup.POST("/comment", postHandler.CommentPost)          // 评论动态
 	authGroup.GET("/comments/:post_id", postHandler.GetComments) // 获取评论列表
-
-	// 动态图片相关功能已移至创建动态时直接关联
 }

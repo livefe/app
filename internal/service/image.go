@@ -20,8 +20,6 @@ type ImageService interface {
 	UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error)
 	// UploadAvatar 上传用户头像
 	UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error)
-	// GetPostImages 获取动态图片
-	GetPostImages(ctx context.Context, postID uint) ([]model.PostImage, error)
 	// MoveImageToPost 将临时图片移动到动态并关联
 	MoveImageToPost(ctx context.Context, imageID, postID, userID uint) (*model.PostImage, error)
 }
@@ -57,39 +55,6 @@ func NewImageService(
 	}, nil
 }
 
-// UploadAvatar 上传用户头像
-func (s *imageService) UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error) {
-	// 查找用户
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		return "", fmt.Errorf("查找用户失败: %w", err)
-	}
-
-	// 生成对象键名
-	objectKey := generateAvatarObjectKey(userID, filename)
-
-	// 获取文件内容类型
-	contentType := getContentTypeByFilename(filename)
-
-	// 上传到COS（使用默认存储桶）
-	url, err := s.cosClient.UploadFile("", objectKey, reader, contentType)
-	if err != nil {
-		return "", fmt.Errorf("上传头像到COS失败: %w", err)
-	}
-
-	// 更新用户头像信息
-	user.Avatar = url
-	user.AvatarObjectKey = objectKey
-	user.AvatarBucket = ""
-
-	err = s.userRepo.Update(user)
-	if err != nil {
-		return "", fmt.Errorf("更新用户头像失败: %w", err)
-	}
-
-	return url, nil
-}
-
 // UploadTempImage 上传临时图片（通用接口，不关联具体模块）
 func (s *imageService) UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.TempImage, error) {
 	// 生成临时图片的对象键名
@@ -121,6 +86,66 @@ func (s *imageService) UploadTempImage(ctx context.Context, userID uint, reader 
 	}
 
 	return tempImage, nil
+}
+
+// UploadMultipleTempImages 批量上传临时图片
+func (s *imageService) UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error) {
+	// 检查参数长度是否一致
+	if len(files) != len(filenames) || len(files) != len(sizes) {
+		return nil, []error{fmt.Errorf("参数数量不匹配")}
+	}
+
+	// 存储上传结果
+	results := make([]model.TempImage, 0, len(files))
+	errs := make([]error, len(files))
+
+	// 循环上传每个文件
+	for i, file := range files {
+		tempImage, err := s.UploadTempImage(ctx, userID, file, filenames[i], sizes[i])
+		if err != nil {
+			// 记录错误
+			errs[i] = fmt.Errorf("上传图片 %s 失败: %w", filenames[i], err)
+		} else {
+			// 添加成功结果
+			results = append(results, *tempImage)
+			errs[i] = nil
+		}
+	}
+
+	return results, errs
+}
+
+// UploadAvatar 上传用户头像
+func (s *imageService) UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error) {
+	// 查找用户
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return "", fmt.Errorf("查找用户失败: %w", err)
+	}
+
+	// 生成对象键名
+	objectKey := generateAvatarObjectKey(userID, filename)
+
+	// 获取文件内容类型
+	contentType := getContentTypeByFilename(filename)
+
+	// 上传到COS（使用默认存储桶）
+	url, err := s.cosClient.UploadFile("", objectKey, reader, contentType)
+	if err != nil {
+		return "", fmt.Errorf("上传头像到COS失败: %w", err)
+	}
+
+	// 更新用户头像信息
+	user.Avatar = url
+	user.AvatarObjectKey = objectKey
+	user.AvatarBucket = ""
+
+	err = s.userRepo.Update(user)
+	if err != nil {
+		return "", fmt.Errorf("更新用户头像失败: %w", err)
+	}
+
+	return url, nil
 }
 
 // MoveImageToPost 将临时图片移动到动态并关联
@@ -187,38 +212,6 @@ func (s *imageService) MoveImageToPost(ctx context.Context, imageID, postID, use
 	}
 
 	return postImage, nil
-}
-
-// GetPostImages 获取动态图片
-func (s *imageService) GetPostImages(ctx context.Context, postID uint) ([]model.PostImage, error) {
-	return s.postImageRepo.GetPostImages(postID)
-}
-
-// UploadMultipleTempImages 批量上传临时图片
-func (s *imageService) UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error) {
-	// 检查参数长度是否一致
-	if len(files) != len(filenames) || len(files) != len(sizes) {
-		return nil, []error{fmt.Errorf("参数数量不匹配")}
-	}
-
-	// 存储上传结果
-	results := make([]model.TempImage, 0, len(files))
-	errs := make([]error, len(files))
-
-	// 循环上传每个文件
-	for i, file := range files {
-		tempImage, err := s.UploadTempImage(ctx, userID, file, filenames[i], sizes[i])
-		if err != nil {
-			// 记录错误
-			errs[i] = fmt.Errorf("上传图片 %s 失败: %w", filenames[i], err)
-		} else {
-			// 添加成功结果
-			results = append(results, *tempImage)
-			errs[i] = nil
-		}
-	}
-
-	return results, errs
 }
 
 // 生成动态图片的对象键名
