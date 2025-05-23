@@ -158,11 +158,20 @@ func (c *Container) GetPostService() service.PostService {
 	return svc.(service.PostService)
 }
 
+// GetTempImageRepository 返回临时图片存储库实例
+func (c *Container) GetTempImageRepository() repository.TempImageRepository {
+	repo := c.getOrCreateRepository("temp_image_repository", func() interface{} {
+		return repository.NewTempImageRepository(c.db)
+	})
+	return repo.(repository.TempImageRepository)
+}
+
 // GetImageService 返回图片服务实例
 func (c *Container) GetImageService() service.ImageService {
 	svc := c.getOrCreateService("image_service", func() interface{} {
 		imageService, err := service.NewImageService(
 			c.GetPostImageRepository(),
+			c.GetTempImageRepository(),
 			c.GetUserRepository(),
 			c.GetPostRepository(),
 		)

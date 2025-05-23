@@ -4,9 +4,7 @@ import (
 	"app/internal/dto"
 	"app/internal/model"
 	"app/internal/repository"
-	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -77,17 +75,11 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 	// 处理已上传的图片ID列表
 	if len(req.ImageIDs) > 0 {
 		for _, imageID := range req.ImageIDs {
-			// 关联图片到动态（直接更新数据库记录，不需要移动文件）
-			err := s.imageService.AssociateImageWithPost(ctx, imageID, post.ID, userID)
+			// 移动图片到动态并关联
+			postImage, err := s.imageService.MoveImageToPost(ctx, imageID, post.ID, userID)
 			if err != nil {
 				fmt.Printf("关联图片失败: %v\n", err)
 				continue // 跳过关联失败的图片
-			}
-
-			// 获取图片信息
-			postImage, err := s.postImageRepo.FindByID(imageID)
-			if err != nil {
-				continue // 跳过获取失败的图片
 			}
 
 			// 添加图片URL到列表
@@ -95,36 +87,11 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 		}
 	}
 
-	// 处理Base64编码的图片数据
-	if len(req.ImageData) > 0 {
-		for i, imgData := range req.ImageData {
-			// 解码Base64数据
-			data, err := base64.StdEncoding.DecodeString(imgData)
-			if err != nil {
-				continue // 跳过无效的图片数据
-			}
-
-			// 创建读取器
-			reader := bytes.NewReader(data)
-
-			// 上传图片到COS
-			filename := fmt.Sprintf("post_%d_image_%d.jpg", post.ID, i)
-			postImage, err := s.imageService.UploadPostImage(ctx, post.ID, userID, reader, filename, int64(len(data)))
-			if err != nil {
-				fmt.Printf("上传图片失败: %v\n", err)
-				continue // 跳过上传失败的图片
-			}
-
-			// 添加图片URL到列表
-			imageURLs = append(imageURLs, postImage.URL)
-		}
-
-		// 更新动态的图片字段（保留兼容字段但只通过COS上传）
-		if len(imageURLs) > 0 {
-			post.Images = strings.Join(imageURLs, ",")
-			// 更新动态记录
-			s.postRepo.UpdatePost(post)
-		}
+	// 更新动态的图片字段
+	if len(imageURLs) > 0 {
+		post.Images = strings.Join(imageURLs, ",")
+		// 更新动态记录
+		s.postRepo.UpdatePost(post)
 	}
 
 	return &dto.CreatePostResponse{

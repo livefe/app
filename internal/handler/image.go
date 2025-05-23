@@ -3,7 +3,6 @@ package handler
 import (
 	"app/internal/service"
 	"app/pkg/response"
-	"fmt"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -23,78 +22,13 @@ func NewImageHandler(imageService service.ImageService, postService service.Post
 	}
 }
 
-// UploadPostImage 上传动态图片（二进制文件方式）
+// UploadPostImage 上传动态图片（二进制文件方式）- 已废弃，请使用UploadTempImage和MoveImageToPost代替
 func (h *ImageHandler) UploadPostImage(c *gin.Context) {
-	// 获取当前用户ID
-	userID, exists := c.Get("userID")
-	if !exists {
-		response.Unauthorized(c, "用户未登录", nil)
-		return
-	}
-
-	// 获取动态ID
-	postIDStr := c.PostForm("post_id")
-	if postIDStr == "" {
-		response.BadRequest(c, "缺少动态ID参数", nil)
-		return
-	}
-
-	// 将postID转换为uint
-	var postID uint
-	if _, err := fmt.Sscanf(postIDStr, "%d", &postID); err != nil {
-		response.BadRequest(c, "动态ID格式错误", err)
-		return
-	}
-
-	// 获取上传的文件
-	file, err := c.FormFile("image")
-	if err != nil {
-		response.BadRequest(c, "获取上传文件失败", err)
-		return
-	}
-
-	// 检查文件大小（可选，例如限制为10MB）
-	if file.Size > 10*1024*1024 {
-		response.BadRequest(c, "文件大小超过限制", nil)
-		return
-	}
-
-	// 检查文件类型（可选）
-	ext := filepath.Ext(file.Filename)
-	validExts := map[string]bool{
-		".jpg":  true,
-		".jpeg": true,
-		".png":  true,
-		".gif":  true,
-		".webp": true,
-	}
-	if !validExts[ext] {
-		response.BadRequest(c, "不支持的文件类型", nil)
-		return
-	}
-
-	// 打开文件
-	src, err := file.Open()
-	if err != nil {
-		response.InternalServerError(c, "打开上传文件失败", err)
-		return
-	}
-	defer src.Close()
-
-	// 直接上传图片到最终位置，不再使用临时目录
-	postImage, err := h.imageService.UploadPostImage(c.Request.Context(), postID, userID.(uint), src, file.Filename, file.Size)
-	if err != nil {
-		response.InternalServerError(c, "上传图片失败", err)
-		return
-	}
-
-	response.Success(c, "上传图片成功", gin.H{
-		"id":  postImage.ID,
-		"url": postImage.URL,
-	})
+	// 返回错误提示，建议使用新的上传方式
+	response.BadRequest(c, "此接口已废弃，请先使用临时图片上传接口，再移动图片到动态", nil)
 }
 
-// UploadTempImage 上传临时图片（不关联动态ID）
+// UploadTempImage 上传临时图片（通用接口，不关联具体模块）
 func (h *ImageHandler) UploadTempImage(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")
@@ -139,47 +73,25 @@ func (h *ImageHandler) UploadTempImage(c *gin.Context) {
 	defer src.Close()
 
 	// 上传临时图片
-	postImage, err := h.imageService.UploadTempImage(c.Request.Context(), userID.(uint), src, file.Filename, file.Size)
+	tempImage, err := h.imageService.UploadTempImage(c.Request.Context(), userID.(uint), src, file.Filename, file.Size)
 	if err != nil {
 		response.InternalServerError(c, "上传图片失败", err)
 		return
 	}
 
 	response.Success(c, "上传图片成功", gin.H{
-		"id":  postImage.ID,
-		"url": postImage.URL,
+		"id":           tempImage.ID,
+		"url":          tempImage.URL,
+		"size":         tempImage.Size,
+		"content_type": tempImage.ContentType,
+		"filename":     filepath.Base(file.Filename),
 	})
 }
 
-// AssociateImageWithPost 将临时图片关联到动态
-func (h *ImageHandler) AssociateImageWithPost(c *gin.Context) {
-	// 获取当前用户ID
-	userID, exists := c.Get("userID")
-	if !exists {
-		response.Unauthorized(c, "用户未登录", nil)
-		return
-	}
-
-	// 解析请求参数
-	type AssociateRequest struct {
-		ImageID uint `json:"image_id" binding:"required"`
-		PostID  uint `json:"post_id" binding:"required"`
-	}
-
-	var req AssociateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误", err)
-		return
-	}
-
-	// 关联图片到动态
-	err := h.imageService.AssociateImageWithPost(c.Request.Context(), req.ImageID, req.PostID, userID.(uint))
-	if err != nil {
-		response.InternalServerError(c, "关联图片失败", err)
-		return
-	}
-
-	response.Success(c, "关联图片成功", nil)
+// MoveImageToPost 已废弃，请在创建动态时直接关联图片
+func (h *ImageHandler) MoveImageToPost(c *gin.Context) {
+	// 返回错误提示，建议使用新的方式
+	response.BadRequest(c, "此接口已废弃，请在创建动态时直接关联图片ID", nil)
 }
 
 // UploadAvatar 上传用户头像（二进制文件方式）

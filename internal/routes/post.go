@@ -41,6 +41,6 @@ func registerPostAuthRoutes(group *gin.RouterGroup, postHandler *handler.PostHan
 	authGroup.GET("/comments/:post_id", postHandler.GetComments) // 获取评论列表
 
 	// 动态图片相关功能
-	authGroup.POST("/image", imageHandler.UploadPostImage)                  // 上传动态图片
-	authGroup.POST("/image/associate", imageHandler.AssociateImageWithPost) // 将临时图片关联到动态
+	authGroup.POST("/image", imageHandler.UploadPostImage)           // 上传动态图片
+	authGroup.POST("/image/associate", imageHandler.MoveImageToPost) // 将临时图片移动到动态并关联
 }
