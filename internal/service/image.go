@@ -16,6 +16,8 @@ import (
 type ImageService interface {
 	// UploadTempImage 上传临时图片（不关联具体模块）
 	UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.TempImage, error)
+	// UploadMultipleTempImages 批量上传临时图片
+	UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error)
 	// UploadAvatar 上传用户头像
 	UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error)
 	// GetPostImages 获取动态图片
@@ -190,6 +192,33 @@ func (s *imageService) MoveImageToPost(ctx context.Context, imageID, postID, use
 // GetPostImages 获取动态图片
 func (s *imageService) GetPostImages(ctx context.Context, postID uint) ([]model.PostImage, error) {
 	return s.postImageRepo.GetPostImages(postID)
+}
+
+// UploadMultipleTempImages 批量上传临时图片
+func (s *imageService) UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error) {
+	// 检查参数长度是否一致
+	if len(files) != len(filenames) || len(files) != len(sizes) {
+		return nil, []error{fmt.Errorf("参数数量不匹配")}
+	}
+
+	// 存储上传结果
+	results := make([]model.TempImage, 0, len(files))
+	errs := make([]error, len(files))
+
+	// 循环上传每个文件
+	for i, file := range files {
+		tempImage, err := s.UploadTempImage(ctx, userID, file, filenames[i], sizes[i])
+		if err != nil {
+			// 记录错误
+			errs[i] = fmt.Errorf("上传图片 %s 失败: %w", filenames[i], err)
+		} else {
+			// 添加成功结果
+			results = append(results, *tempImage)
+			errs[i] = nil
+		}
+	}
+
+	return results, errs
 }
 
 // 生成动态图片的对象键名
