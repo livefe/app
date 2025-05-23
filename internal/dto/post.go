@@ -8,6 +8,7 @@ import "time"
 type CreatePostRequest struct {
 	Content    string   `json:"content" validate:"required,max=1000"` // 动态内容
 	ImageData  []string `json:"image_data"`                           // Base64编码的图片数据
+	ImageIDs   []uint   `json:"image_ids"`                            // 已上传图片的ID列表
 	Visibility int      `json:"visibility" validate:"min=0,max=2"`    // 可见性：0-公开，1-仅关注者可见，2-仅自己可见
 }
 

@@ -16,10 +16,14 @@ import (
 type ImageService interface {
 	// UploadPostImage 上传动态图片
 	UploadPostImage(ctx context.Context, postID, userID uint, reader io.Reader, filename string, size int64) (*model.PostImage, error)
+	// UploadTempImage 上传临时图片（不关联动态ID）
+	UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.PostImage, error)
 	// UploadAvatar 上传用户头像
 	UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error)
 	// GetPostImages 获取动态图片
 	GetPostImages(ctx context.Context, postID uint) ([]model.PostImage, error)
+	// AssociateImageWithPost 将临时图片关联到动态
+	AssociateImageWithPost(ctx context.Context, imageID, postID, userID uint) error
 }
 
 // imageService 图片服务实现
@@ -27,12 +31,14 @@ type imageService struct {
 	postImageRepo repository.PostImageRepository
 	userRepo      repository.UserRepository
 	cosClient     *cos.StorageClient
+	postRepo      repository.PostRepository
 }
 
 // NewImageService 创建图片服务实例
 func NewImageService(
 	postImageRepo repository.PostImageRepository,
 	userRepo repository.UserRepository,
+	postRepo repository.PostRepository,
 ) (ImageService, error) {
 	// 获取COS客户端
 	cosClient, err := cos.GetStorageClient()
@@ -43,6 +49,7 @@ func NewImageService(
 	return &imageService{
 		postImageRepo: postImageRepo,
 		userRepo:      userRepo,
+		postRepo:      postRepo,
 		cosClient:     cosClient,
 	}, nil
 }
@@ -115,6 +122,74 @@ func (s *imageService) UploadAvatar(ctx context.Context, userID uint, reader io.
 	return url, nil
 }
 
+// UploadTempImage 上传临时图片（不关联动态ID）
+func (s *imageService) UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.PostImage, error) {
+	// 生成临时图片的对象键名
+	objectKey := generateTempImageObjectKey(userID, filename)
+
+	// 获取文件内容类型
+	contentType := getContentTypeByFilename(filename)
+
+	// 上传到COS
+	url, err := s.cosClient.UploadFile("", objectKey, reader, contentType)
+	if err != nil {
+		return nil, fmt.Errorf("上传临时图片到COS失败: %w", err)
+	}
+
+	// 创建图片记录（PostID为0表示临时图片）
+	postImage := &model.PostImage{
+		PostID:      0, // 临时图片，未关联到动态
+		UserID:      userID,
+		ObjectKey:   objectKey,
+		URL:         url,
+		Bucket:      "", // 使用默认存储桶
+		Size:        size,
+		ContentType: contentType,
+	}
+
+	// 保存到数据库
+	err = s.postImageRepo.CreatePostImage(postImage)
+	if err != nil {
+		return nil, fmt.Errorf("保存临时图片记录失败: %w", err)
+	}
+
+	return postImage, nil
+}
+
+// AssociateImageWithPost 将临时图片关联到动态
+func (s *imageService) AssociateImageWithPost(ctx context.Context, imageID, postID, userID uint) error {
+	// 查找图片
+	postImage, err := s.postImageRepo.FindByID(imageID)
+	if err != nil {
+		return fmt.Errorf("查找图片记录失败: %w", err)
+	}
+
+	// 验证图片所有权
+	if postImage.UserID != userID {
+		return fmt.Errorf("无权操作此图片")
+	}
+
+	// 验证图片是否为临时图片
+	if postImage.PostID != 0 {
+		return fmt.Errorf("图片已关联到其他动态")
+	}
+
+	// 验证动态是否存在
+	_, err = s.postRepo.GetPost(postID)
+	if err != nil {
+		return fmt.Errorf("动态不存在: %w", err)
+	}
+
+	// 更新图片关联的动态ID
+	postImage.PostID = postID
+	err = s.postImageRepo.UpdatePostImage(postImage)
+	if err != nil {
+		return fmt.Errorf("更新图片关联失败: %w", err)
+	}
+
+	return nil
+}
+
 // GetPostImages 获取动态图片
 func (s *imageService) GetPostImages(ctx context.Context, postID uint) ([]model.PostImage, error) {
 	return s.postImageRepo.GetPostImages(postID)
@@ -125,6 +200,13 @@ func generatePostImageObjectKey(userID, postID uint, filename string) string {
 	extension := filepath.Ext(filename)
 	timestamp := time.Now().UnixNano() / 1e6 // 毫秒级时间戳
 	return fmt.Sprintf("posts/%d/%d/%d%s", userID, postID, timestamp, extension)
+}
+
+// 生成临时图片的对象键名
+func generateTempImageObjectKey(userID uint, filename string) string {
+	extension := filepath.Ext(filename)
+	timestamp := time.Now().UnixNano() / 1e6 // 毫秒级时间戳
+	return fmt.Sprintf("temp/%d/%d%s", userID, timestamp, extension)
 }
 
 // 生成用户头像的对象键名

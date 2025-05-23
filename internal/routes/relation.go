@@ -13,10 +13,7 @@ import (
 func RegisterRelationRoutes(r *gin.Engine) {
 	// 从容器获取用户关系服务
 	container := container.GetInstance()
-	relationService := container.GetRelationService()
-
-	// 初始化用户关系处理器
-	relationHandler := handler.NewRelationHandler(relationService)
+	relationHandler := container.GetRelationHandler()
 
 	// API根路径
 	apiGroup := r.Group("/api")

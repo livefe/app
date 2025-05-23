@@ -242,3 +242,51 @@ func (p *TencentCOSProvider) getFileURL(bucket, objectKey string) string {
 	// 使用默认COS域名
 	return fmt.Sprintf("https://%s.cos.%s.myqcloud.com/%s", bucket, p.config.Region, objectKey)
 }
+
+// CopyFile 复制文件，实现StorageProvider接口
+func (p *TencentCOSProvider) CopyFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error {
+	// 获取目标存储桶客户端
+	destClient, err := p.getBucketClient(destBucket)
+	if err != nil {
+		return err
+	}
+
+	// 记录最终使用的桶名（可能是默认桶）
+	if srcBucket == "" {
+		srcBucket = p.config.DefaultBucket
+	}
+	if destBucket == "" {
+		destBucket = p.config.DefaultBucket
+	}
+
+	// 构建源对象URL，腾讯云COS SDK的Copy方法要求格式
+	// 格式应为：<BucketName>.cos.<Region>.myqcloud.com/<ObjectKey>
+	sourceURL := fmt.Sprintf("https://%s.cos.%s.myqcloud.com/%s", srcBucket, p.config.Region, srcObjectKey)
+
+	// 复制对象
+	_, _, err = destClient.Object.Copy(context.Background(), destObjectKey, sourceURL, nil)
+	if err != nil {
+		return fmt.Errorf("复制文件失败: %v", err)
+	}
+
+	return nil
+}
+
+// MoveFile 移动文件，实现StorageProvider接口
+func (p *TencentCOSProvider) MoveFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error {
+	// 移动文件实际上是先复制，再删除源文件
+	// 先复制文件
+	err := p.CopyFile(srcBucket, srcObjectKey, destBucket, destObjectKey)
+	if err != nil {
+		return fmt.Errorf("移动文件时复制失败: %v", err)
+	}
+
+	// 删除源文件
+	err = p.DeleteFile(srcBucket, srcObjectKey)
+	if err != nil {
+		// 如果删除源文件失败，记录错误但不中断操作，因为文件已经成功复制
+		fmt.Printf("警告: 移动文件时删除源文件失败: %v\n", err)
+	}
+
+	return nil
+}

@@ -43,6 +43,9 @@ func registerModuleRoutes(r *gin.Engine) {
 
 	// 用户关系模块路由
 	RegisterRelationRoutes(r)
+
+	// 图片上传模块路由
+	RegisterImageRoutes(r)
 }
 
 // HealthCheck 处理健康检查请求

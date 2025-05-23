@@ -74,6 +74,27 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 	// 处理图片上传
 	var imageURLs []string
 
+	// 处理已上传的图片ID列表
+	if len(req.ImageIDs) > 0 {
+		for _, imageID := range req.ImageIDs {
+			// 关联图片到动态（直接更新数据库记录，不需要移动文件）
+			err := s.imageService.AssociateImageWithPost(ctx, imageID, post.ID, userID)
+			if err != nil {
+				fmt.Printf("关联图片失败: %v\n", err)
+				continue // 跳过关联失败的图片
+			}
+
+			// 获取图片信息
+			postImage, err := s.postImageRepo.FindByID(imageID)
+			if err != nil {
+				continue // 跳过获取失败的图片
+			}
+
+			// 添加图片URL到列表
+			imageURLs = append(imageURLs, postImage.URL)
+		}
+	}
+
 	// 处理Base64编码的图片数据
 	if len(req.ImageData) > 0 {
 		for i, imgData := range req.ImageData {

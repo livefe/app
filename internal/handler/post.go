@@ -37,7 +37,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
+	// 调用服务创建动态
 	res, err := h.postService.CreatePost(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "创建动态失败", err)

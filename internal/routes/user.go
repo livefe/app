@@ -13,10 +13,7 @@ import (
 func RegisterUserRoutes(r *gin.Engine) {
 	// 从容器获取用户服务
 	container := container.GetInstance()
-	userService := container.GetUserService()
-
-	// 初始化用户处理器
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := container.GetUserHandler()
 
 	// 用户API根路径
 	apiGroup := r.Group("/api")

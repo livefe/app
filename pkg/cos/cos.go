@@ -33,6 +33,16 @@ type StorageProvider interface {
 	// 参数: bucket - 存储桶名称, prefix - 前缀
 	// 返回: 文件列表和可能的错误
 	ListFiles(bucket, prefix string) ([]FileInfo, error)
+
+	// CopyFile 复制文件
+	// 参数: srcBucket - 源存储桶名称, srcObjectKey - 源对象键, destBucket - 目标存储桶名称, destObjectKey - 目标对象键
+	// 返回: 可能的错误
+	CopyFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error
+
+	// MoveFile 移动文件
+	// 参数: srcBucket - 源存储桶名称, srcObjectKey - 源对象键, destBucket - 目标存储桶名称, destObjectKey - 目标对象键
+	// 返回: 可能的错误
+	MoveFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error
 }
 
 // FileInfo 文件信息结构体
@@ -89,6 +99,16 @@ func (c *StorageClient) GetFileURL(bucket, objectKey string, expires time.Durati
 // ListFiles 列出文件，内部委托给具体的对象存储服务提供商实现
 func (c *StorageClient) ListFiles(bucket, prefix string) ([]FileInfo, error) {
 	return c.provider.ListFiles(bucket, prefix)
+}
+
+// CopyFile 复制文件，内部委托给具体的对象存储服务提供商实现
+func (c *StorageClient) CopyFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error {
+	return c.provider.CopyFile(srcBucket, srcObjectKey, destBucket, destObjectKey)
+}
+
+// MoveFile 移动文件，内部委托给具体的对象存储服务提供商实现
+func (c *StorageClient) MoveFile(srcBucket, srcObjectKey, destBucket, destObjectKey string) error {
+	return c.provider.MoveFile(srcBucket, srcObjectKey, destBucket, destObjectKey)
 }
 
 // ProviderType 对象存储服务提供商类型，用于标识不同的对象存储服务提供商
