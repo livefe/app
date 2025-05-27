@@ -434,32 +434,6 @@ func (s *userService) UpdateProfile(ctx context.Context, req *dto.UpdateProfileR
 		user.Nickname = req.Nickname
 	}
 
-	// 处理头像上传
-	if req.AvatarData != "" {
-		// 解析Base64图片数据
-		reader, filename, _, err := utils.ParseBase64Image(req.AvatarData)
-		if err != nil {
-			logger.Error(ctx, "解析头像数据失败",
-				logger.Uint("user_id", userID),
-				logger.Err(err))
-			return nil, fmt.Errorf("解析头像数据失败: %w", err)
-		}
-
-		// 上传头像到COS
-		avatarURL, err := s.imageService.UploadAvatar(ctx, userID, reader, filename)
-		if err != nil {
-			logger.Error(ctx, "上传头像失败",
-				logger.Uint("user_id", userID),
-				logger.Err(err))
-			return nil, fmt.Errorf("上传头像失败: %w", err)
-		}
-
-		// 头像URL已在UploadAvatar方法中更新到用户记录
-		logger.Info(ctx, "头像上传成功",
-			logger.Uint("user_id", userID),
-			logger.String("avatar_url", avatarURL))
-	}
-
 	// 构建响应
 	response := &dto.UserProfileResponse{
 		ID:       user.ID,

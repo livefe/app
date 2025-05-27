@@ -42,8 +42,6 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	}
 }
 
-// 查询方法
-
 // FindByID 根据ID查找用户
 func (r *userRepository) FindByID(id uint) (*model.User, error) {
 	var user model.User
@@ -69,8 +67,6 @@ func (r *userRepository) FindByMobile(mobile string) (*model.User, error) {
 	}
 	return &user, nil
 }
-
-// 修改方法
 
 // Create 创建用户
 func (r *userRepository) Create(user *model.User) error {

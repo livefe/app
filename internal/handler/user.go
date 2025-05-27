@@ -150,8 +150,6 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 	response.Success(c, "获取用户信息成功", resp)
 }
 
-// 账号管理相关处理方法
-
 // DeactivateAccount 注销账号
 func (h *UserHandler) DeactivateAccount(c *gin.Context) {
 	var req dto.DeactivateAccountRequest

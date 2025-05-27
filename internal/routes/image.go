@@ -20,12 +20,8 @@ func RegisterImageRoutes(router *gin.Engine) {
 		authGroup := imageGroup.Group("/")
 		authGroup.Use(middleware.AuthMiddleware())
 		{
-			// 上传临时图片（二进制文件方式，不关联动态ID）
-			authGroup.POST("/temp", imageHandler.UploadTempImage)
-			// 批量上传临时图片（多文件上传）
-			authGroup.POST("/temp/multiple", imageHandler.UploadMultipleTempImages)
-			// 上传用户头像（二进制文件方式）
-			authGroup.POST("/avatar", imageHandler.UploadAvatar)
+			authGroup.POST("/temp", imageHandler.UploadTempImage)                   // 上传临时图片
+			authGroup.POST("/temp/multiple", imageHandler.UploadMultipleTempImages) // 批量上传临时图片
 		}
 	}
 }

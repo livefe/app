@@ -8,12 +8,9 @@ import (
 
 // UserFollowerRepository 粉丝关注仓库接口
 type UserFollowerRepository interface {
-	// 查询方法
 	GetFollower(userID, targetID uint) (*model.UserFollower, error)
 	GetFollowers(userID uint, page, size int) ([]model.UserFollower, int64, error)
 	GetFollowing(userID uint, page, size int) ([]model.UserFollower, int64, error)
-
-	// 修改方法
 	CreateFollower(follower *model.UserFollower) error
 	DeleteFollower(userID, targetID uint) error
 }
@@ -27,8 +24,6 @@ type userFollowerRepository struct {
 func NewUserFollowerRepository(db *gorm.DB) UserFollowerRepository {
 	return &userFollowerRepository{db: db}
 }
-
-// 查询方法
 
 // GetFollower 获取关注关系
 func (r *userFollowerRepository) GetFollower(userID, targetID uint) (*model.UserFollower, error) {
@@ -79,8 +74,6 @@ func (r *userFollowerRepository) GetFollowing(userID uint, page, size int) ([]mo
 
 	return followers, count, nil
 }
-
-// 修改方法
 
 // CreateFollower 创建关注关系
 func (r *userFollowerRepository) CreateFollower(follower *model.UserFollower) error {

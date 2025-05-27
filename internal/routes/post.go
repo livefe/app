@@ -14,7 +14,6 @@ func RegisterPostRoutes(r *gin.Engine) {
 	// 从容器获取服务
 	container := container.GetInstance()
 	postHandler := container.GetPostHandler()
-	imageHandler := container.GetImageHandler()
 
 	// API根路径
 	apiGroup := r.Group("/api")
@@ -23,19 +22,15 @@ func RegisterPostRoutes(r *gin.Engine) {
 	postGroup := apiGroup.Group("/post")
 
 	// 注册需要认证的动态路由
-	registerPostAuthRoutes(postGroup, postHandler, imageHandler)
+	registerPostAuthRoutes(postGroup, postHandler)
 }
 
 // registerPostAuthRoutes 注册需要认证的动态相关路由
-func registerPostAuthRoutes(group *gin.RouterGroup, postHandler *handler.PostHandler, imageHandler *handler.ImageHandler) {
+func registerPostAuthRoutes(group *gin.RouterGroup, postHandler *handler.PostHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())
-
-	// 动态管理
-	authGroup.POST("/create", postHandler.CreatePost) // 创建动态
-	authGroup.GET("/list", postHandler.GetPosts)      // 获取动态列表
-
-	// 互动功能
+	authGroup.POST("/create", postHandler.CreatePost)            // 创建动态
+	authGroup.GET("/list", postHandler.GetPosts)                 // 获取动态列表
 	authGroup.POST("/like", postHandler.LikePost)                // 点赞动态
 	authGroup.POST("/comment", postHandler.CommentPost)          // 评论动态
 	authGroup.GET("/comments/:post_id", postHandler.GetComments) // 获取评论列表

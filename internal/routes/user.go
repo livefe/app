@@ -37,8 +37,6 @@ func registerUserPublicRoutes(group *gin.RouterGroup, handler *handler.UserHandl
 func registerUserAuthRoutes(group *gin.RouterGroup, handler *handler.UserHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())
-
-	// 用户信息管理
 	authGroup.GET("/:id", handler.GetUserInfo)               // 获取用户信息
 	authGroup.POST("/deactivate", handler.DeactivateAccount) // 注销账号
 	authGroup.POST("/logout", handler.Logout)                // 退出登录

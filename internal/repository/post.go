@@ -32,8 +32,6 @@ func NewPostRepository(db *gorm.DB) PostRepository {
 	return &postRepository{db: db}
 }
 
-// 查询方法
-
 // GetPost 获取动态
 func (r *postRepository) GetPost(id uint) (*model.Post, error) {
 	var post model.Post
@@ -140,8 +138,6 @@ func (r *postRepository) GetFollowingPosts(userID uint, page, size int) ([]model
 
 	return posts, count, nil
 }
-
-// 修改方法
 
 // CreatePost 创建动态
 func (r *postRepository) CreatePost(post *model.Post) error {

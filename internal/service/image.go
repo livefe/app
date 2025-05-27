@@ -14,12 +14,10 @@ import (
 
 // ImageService 图片服务接口
 type ImageService interface {
-	// UploadTempImage 上传临时图片（不关联具体模块）
+	// UploadTempImage 上传临时图片
 	UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.TempImage, error)
 	// UploadMultipleTempImages 批量上传临时图片
 	UploadMultipleTempImages(ctx context.Context, userID uint, files []io.Reader, filenames []string, sizes []int64) ([]model.TempImage, []error)
-	// UploadAvatar 上传用户头像
-	UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error)
 	// MoveImageToPost 将临时图片移动到动态并关联
 	MoveImageToPost(ctx context.Context, imageID, postID, userID uint) (*model.PostImage, error)
 }
@@ -113,39 +111,6 @@ func (s *imageService) UploadMultipleTempImages(ctx context.Context, userID uint
 	}
 
 	return results, errs
-}
-
-// UploadAvatar 上传用户头像
-func (s *imageService) UploadAvatar(ctx context.Context, userID uint, reader io.Reader, filename string) (string, error) {
-	// 查找用户
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		return "", fmt.Errorf("查找用户失败: %w", err)
-	}
-
-	// 生成对象键名
-	objectKey := generateAvatarObjectKey(userID, filename)
-
-	// 获取文件内容类型
-	contentType := getContentTypeByFilename(filename)
-
-	// 上传到COS（使用默认存储桶）
-	url, err := s.cosClient.UploadFile("", objectKey, reader, contentType)
-	if err != nil {
-		return "", fmt.Errorf("上传头像到COS失败: %w", err)
-	}
-
-	// 更新用户头像信息
-	user.Avatar = url
-	user.AvatarObjectKey = objectKey
-	user.AvatarBucket = ""
-
-	err = s.userRepo.Update(user)
-	if err != nil {
-		return "", fmt.Errorf("更新用户头像失败: %w", err)
-	}
-
-	return url, nil
 }
 
 // MoveImageToPost 将临时图片移动到动态并关联

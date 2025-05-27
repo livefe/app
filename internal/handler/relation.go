@@ -21,8 +21,6 @@ func NewRelationHandler(relationService service.RelationService) *RelationHandle
 	}
 }
 
-// ==================== 粉丝关注相关处理方法 ====================
-
 // FollowUser 关注用户
 func (h *RelationHandler) FollowUser(c *gin.Context) {
 	// 获取当前用户ID
@@ -132,8 +130,6 @@ func (h *RelationHandler) GetFollowing(c *gin.Context) {
 
 	response.Success(c, "获取关注列表成功", res)
 }
-
-// ==================== 好友关系相关处理方法 ====================
 
 // AddFriend 添加好友
 func (h *RelationHandler) AddFriend(c *gin.Context) {
