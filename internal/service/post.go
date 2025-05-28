@@ -87,18 +87,10 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 		}
 	}
 
-	// 更新动态的图片字段
-	if len(imageURLs) > 0 {
-		post.Images = strings.Join(imageURLs, ",")
-		// 更新动态记录
-		s.postRepo.UpdatePost(post)
-	}
-
 	return &dto.CreatePostResponse{
 		ID:        post.ID,
 		UserID:    post.UserID,
 		Content:   post.Content,
-		Images:    post.Images,
 		CreatedAt: post.CreatedAt,
 	}, nil
 }
