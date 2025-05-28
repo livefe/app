@@ -103,8 +103,11 @@ func (c *Container) GetPostRepository() repository.PostRepository {
 
 // GetPostCommentRepository 返回动态评论仓库实例
 func (c *Container) GetPostCommentRepository() repository.PostCommentRepository {
+	// 先获取PostRepository实例
+	postRepo := c.GetPostRepository()
+
 	repo := c.getOrCreateRepository("post_comment_repository", func() interface{} {
-		return repository.NewPostCommentRepository(c.db)
+		return repository.NewPostCommentRepository(c.db, postRepo)
 	})
 	return repo.(repository.PostCommentRepository)
 }

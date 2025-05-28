@@ -37,7 +37,6 @@ func (h *RelationHandler) FollowUser(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	res, err := h.relationService.FollowUser(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "关注用户失败", err)
@@ -63,7 +62,6 @@ func (h *RelationHandler) UnfollowUser(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	err := h.relationService.UnfollowUser(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "取消关注失败", err)
@@ -92,7 +90,6 @@ func (h *RelationHandler) GetFollowers(c *gin.Context) {
 		Size:   size,
 	}
 
-	// 调用服务
 	res, err := h.relationService.GetFollowers(c.Request.Context(), req)
 	if err != nil {
 		response.InternalServerError(c, "获取粉丝列表失败", err)
@@ -121,7 +118,6 @@ func (h *RelationHandler) GetFollowing(c *gin.Context) {
 		Size:   size,
 	}
 
-	// 调用服务
 	res, err := h.relationService.GetFollowing(c.Request.Context(), req)
 	if err != nil {
 		response.InternalServerError(c, "获取关注列表失败", err)
@@ -147,7 +143,6 @@ func (h *RelationHandler) AddFriend(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	res, err := h.relationService.AddFriend(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "添加好友失败", err)
@@ -173,7 +168,6 @@ func (h *RelationHandler) AcceptFriend(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	err := h.relationService.AcceptFriend(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "接受好友请求失败", err)
@@ -199,7 +193,6 @@ func (h *RelationHandler) RejectFriend(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	err := h.relationService.RejectFriend(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "拒绝好友请求失败", err)
@@ -225,7 +218,6 @@ func (h *RelationHandler) DeleteFriend(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	err := h.relationService.DeleteFriend(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "删除好友失败", err)
@@ -253,7 +245,6 @@ func (h *RelationHandler) GetFriendRequests(c *gin.Context) {
 		Size: size,
 	}
 
-	// 调用服务
 	res, err := h.relationService.GetFriendRequests(c.Request.Context(), req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "获取好友请求列表失败", err)
@@ -281,7 +272,6 @@ func (h *RelationHandler) GetFriends(c *gin.Context) {
 		Size: size,
 	}
 
-	// 调用服务
 	res, err := h.relationService.GetFriends(c.Request.Context(), req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "获取好友列表失败", err)

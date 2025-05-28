@@ -21,8 +21,6 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
-// 认证相关处理方法
-
 // SendVerificationCode 发送验证码
 func (h *UserHandler) SendVerificationCode(c *gin.Context) {
 	var req dto.SendVerificationCodeRequest
@@ -31,7 +29,7 @@ func (h *UserHandler) SendVerificationCode(c *gin.Context) {
 		return
 	}
 
-	// 调用服务发送验证码，传递Gin上下文
+	// 发送验证码
 	resp, err := h.userService.SendVerificationCode(c, &req)
 	if err != nil {
 		response.InternalServerError(c, "发送验证码失败", err)
@@ -49,7 +47,7 @@ func (h *UserHandler) VerificationCodeLogin(c *gin.Context) {
 		return
 	}
 
-	// 调用服务进行验证码登录，传递Gin上下文
+	// 验证码登录
 	resp, err := h.userService.VerificationCodeLogin(c, &req)
 	if err != nil {
 		// 根据错误类型设置不同的状态码和错误消息
@@ -105,7 +103,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	// 设置令牌到请求中
 	req.Token = parts[1]
 
-	// 调用服务退出登录，传递Gin上下文
+	// 退出登录
 	resp, err := h.userService.Logout(c, &req)
 	if err != nil {
 		response.InternalServerError(c, "退出登录失败", err)
@@ -115,7 +113,46 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	response.Success(c, resp.Message, nil)
 }
 
-// 查询相关处理方法
+// DeactivateAccount 注销账号
+func (h *UserHandler) DeactivateAccount(c *gin.Context) {
+	var req dto.DeactivateAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求参数错误", err)
+		return
+	}
+
+	// 从上下文中获取当前用户ID
+	currentUserID, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "未授权访问", nil)
+		return
+	}
+
+	// 权限检查：用户只能注销自己的账号
+	if currentUserID.(uint) != req.UserID {
+		response.Forbidden(c, "权限不足，无法注销其他用户账号", nil)
+		return
+	}
+
+	// 注销账号
+	err := h.userService.DeactivateAccount(c, &req)
+	if err != nil {
+		// 根据错误类型设置不同的状态码和错误消息
+		switch err {
+		case service.ErrInvalidCode:
+			response.BadRequest(c, "验证码无效或已过期", err)
+		case service.ErrUserNotFound:
+			response.NotFound(c, "用户不存在", err)
+		case service.ErrDeactivateFailed:
+			response.InternalServerError(c, "注销账号失败", err)
+		default:
+			response.InternalServerError(c, "注销账号失败", err)
+		}
+		return
+	}
+
+	response.Success(c, "账号已成功注销", nil)
+}
 
 // GetUserInfo 获取用户信息，仅允许用户查看自己的信息
 func (h *UserHandler) GetUserInfo(c *gin.Context) {
@@ -148,45 +185,4 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 	}
 
 	response.Success(c, "获取用户信息成功", resp)
-}
-
-// DeactivateAccount 注销账号
-func (h *UserHandler) DeactivateAccount(c *gin.Context) {
-	var req dto.DeactivateAccountRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "请求参数错误", err)
-		return
-	}
-
-	// 从上下文中获取当前用户ID
-	currentUserID, exists := c.Get("userID")
-	if !exists {
-		response.Unauthorized(c, "未授权访问", nil)
-		return
-	}
-
-	// 权限检查：用户只能注销自己的账号
-	if currentUserID.(uint) != req.UserID {
-		response.Forbidden(c, "权限不足，无法注销其他用户账号", nil)
-		return
-	}
-
-	// 调用服务注销账号，传递Gin上下文
-	err := h.userService.DeactivateAccount(c, &req)
-	if err != nil {
-		// 根据错误类型设置不同的状态码和错误消息
-		switch err {
-		case service.ErrInvalidCode:
-			response.BadRequest(c, "验证码无效或已过期", err)
-		case service.ErrUserNotFound:
-			response.NotFound(c, "用户不存在", err)
-		case service.ErrDeactivateFailed:
-			response.InternalServerError(c, "注销账号失败", err)
-		default:
-			response.InternalServerError(c, "注销账号失败", err)
-		}
-		return
-	}
-
-	response.Success(c, "账号已成功注销", nil)
 }

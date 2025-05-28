@@ -37,7 +37,6 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	// 调用服务创建动态
 	res, err := h.postService.CreatePost(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "创建动态失败", err)
@@ -76,7 +75,6 @@ func (h *PostHandler) GetPosts(c *gin.Context) {
 		Size:   size,
 	}
 
-	// 调用服务
 	res, err := h.postService.GetPosts(c.Request.Context(), req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "获取动态列表失败", err)
@@ -102,7 +100,6 @@ func (h *PostHandler) LikePost(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	err := h.postService.LikePost(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "点赞失败", err)
@@ -128,7 +125,6 @@ func (h *PostHandler) CommentPost(c *gin.Context) {
 		return
 	}
 
-	// 调用服务
 	res, err := h.postService.CommentPost(c.Request.Context(), &req, userID.(uint))
 	if err != nil {
 		response.InternalServerError(c, "评论失败", err)
@@ -157,7 +153,6 @@ func (h *PostHandler) GetComments(c *gin.Context) {
 		Size:   size,
 	}
 
-	// 调用服务
 	res, err := h.postService.GetComments(c.Request.Context(), req)
 	if err != nil {
 		response.InternalServerError(c, "获取评论列表失败", err)

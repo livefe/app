@@ -15,11 +15,8 @@ func RegisterUserRoutes(r *gin.Engine) {
 	container := container.GetInstance()
 	userHandler := container.GetUserHandler()
 
-	// 用户API根路径
-	apiGroup := r.Group("/api")
-
-	// 用户相关API组
-	userGroup := apiGroup.Group("/user")
+	// 用户相关路由
+	userGroup := r.Group("/api/user")
 
 	// 注册用户模块的路由
 	registerUserPublicRoutes(userGroup, userHandler)
@@ -28,7 +25,6 @@ func RegisterUserRoutes(r *gin.Engine) {
 
 // registerUserPublicRoutes 注册用户模块的公开路由（无需认证）
 func registerUserPublicRoutes(group *gin.RouterGroup, handler *handler.UserHandler) {
-	// 认证相关
 	group.POST("/verification-code", handler.SendVerificationCode) // 发送验证码
 	group.POST("/login/code", handler.VerificationCodeLogin)       // 验证码登录
 }
@@ -37,7 +33,8 @@ func registerUserPublicRoutes(group *gin.RouterGroup, handler *handler.UserHandl
 func registerUserAuthRoutes(group *gin.RouterGroup, handler *handler.UserHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())
-	authGroup.GET("/:id", handler.GetUserInfo)               // 获取用户信息
-	authGroup.POST("/deactivate", handler.DeactivateAccount) // 注销账号
+
 	authGroup.POST("/logout", handler.Logout)                // 退出登录
+	authGroup.POST("/deactivate", handler.DeactivateAccount) // 注销账号
+	authGroup.GET("/:id", handler.GetUserInfo)               // 获取用户信息
 }

@@ -140,9 +140,6 @@ func (s *postService) GetPosts(ctx context.Context, req *dto.GetPostsRequest, us
 				imageURLs[i] = img.URL
 			}
 			images = strings.Join(imageURLs, ",")
-		} else if post.Images != "" {
-			// 兼容旧数据，但这部分代码将随着数据迁移逐渐不再需要
-			images = post.Images
 		}
 
 		postList = append(postList, dto.PostDetail{
@@ -203,25 +200,14 @@ func (s *postService) CommentPost(ctx context.Context, req *dto.CommentPostReque
 		ParentID: req.ParentID,
 	}
 
-	err = s.commentRepo.CreateComment(comment)
+	// 使用事务创建评论
+	err = s.commentRepo.CreateCommentWithTransaction(comment, req.PostID)
 	if err != nil {
-		return nil, fmt.Errorf("创建评论失败: %w", err)
-	}
-
-	// 增加评论数
-	err = s.postRepo.IncrementPostComments(req.PostID)
-	if err != nil {
-		// 评论已创建，但增加评论数失败，记录错误但不影响返回
-		// 实际项目中应该使用事务或消息队列确保一致性
-		fmt.Printf("增加评论数失败: %v\n", err)
+		return nil, err
 	}
 
 	// 获取用户信息以返回昵称和头像
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		// 用户信息获取失败，但不影响评论创建，使用默认值
-		fmt.Printf("获取用户信息失败: %v\n", err)
-	}
+	user, _ := s.userRepo.FindByID(userID)
 
 	var nickname, avatar string
 	if user != nil {

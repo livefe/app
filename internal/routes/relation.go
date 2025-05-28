@@ -15,11 +15,8 @@ func RegisterRelationRoutes(r *gin.Engine) {
 	container := container.GetInstance()
 	relationHandler := container.GetRelationHandler()
 
-	// API根路径
-	apiGroup := r.Group("/api")
-
-	// 用户关系相关API组
-	relationGroup := apiGroup.Group("/relation")
+	// 用户关系相关路由
+	relationGroup := r.Group("/api/relation")
 
 	// 注册需要认证的用户关系路由
 	registerRelationAuthRoutes(relationGroup, relationHandler)
@@ -29,6 +26,7 @@ func RegisterRelationRoutes(r *gin.Engine) {
 func registerRelationAuthRoutes(group *gin.RouterGroup, handler *handler.RelationHandler) {
 	// 添加认证中间件
 	authGroup := group.Group("/", middleware.AuthMiddleware())
+
 	authGroup.POST("/follow", handler.FollowUser)                // 关注用户
 	authGroup.POST("/unfollow", handler.UnfollowUser)            // 取消关注
 	authGroup.GET("/followers/:user_id", handler.GetFollowers)   // 获取粉丝列表

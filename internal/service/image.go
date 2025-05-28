@@ -53,7 +53,7 @@ func NewImageService(
 	}, nil
 }
 
-// UploadTempImage 上传临时图片（通用接口，不关联具体模块）
+// UploadTempImage 上传临时图片
 func (s *imageService) UploadTempImage(ctx context.Context, userID uint, reader io.Reader, filename string, size int64) (*model.TempImage, error) {
 	// 生成临时图片的对象键名
 	objectKey := generateTempImageObjectKey(userID, filename)
@@ -191,13 +191,6 @@ func generateTempImageObjectKey(userID uint, filename string) string {
 	extension := filepath.Ext(filename)
 	timestamp := time.Now().UnixNano() / 1e6 // 毫秒时间戳
 	return fmt.Sprintf("temp/%d/%d%s", userID, timestamp, extension)
-}
-
-// 生成用户头像的对象键名
-func generateAvatarObjectKey(userID uint, filename string) string {
-	extension := filepath.Ext(filename)
-	timestamp := time.Now().UnixNano() / 1e6 // 毫秒级时间戳
-	return fmt.Sprintf("avatars/%d/%d%s", userID, timestamp, extension)
 }
 
 // 根据文件名获取内容类型

@@ -23,7 +23,7 @@ func NewImageHandler(imageService service.ImageService, postService service.Post
 	}
 }
 
-// UploadTempImage 上传临时图片（通用接口，不关联具体模块）
+// UploadTempImage 上传临时图片
 func (h *ImageHandler) UploadTempImage(c *gin.Context) {
 	// 获取当前用户ID
 	userID, exists := c.Get("userID")

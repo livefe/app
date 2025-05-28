@@ -20,6 +20,8 @@ type PostRepository interface {
 	UpdatePost(post *model.Post) error
 	IncrementPostLikes(postID uint) error
 	IncrementPostComments(postID uint) error
+	// 事务方法
+	IncrementPostCommentsWithTx(tx *gorm.DB, postID uint) error
 }
 
 // postRepository 动态仓库实现
@@ -157,4 +159,9 @@ func (r *postRepository) UpdatePost(post *model.Post) error {
 // IncrementPostComments 增加动态评论数
 func (r *postRepository) IncrementPostComments(postID uint) error {
 	return r.db.Model(&model.Post{}).Where("id = ?", postID).Update("comments", gorm.Expr("comments + ?", 1)).Error
+}
+
+// IncrementPostCommentsWithTx 在事务中增加动态评论数
+func (r *postRepository) IncrementPostCommentsWithTx(tx *gorm.DB, postID uint) error {
+	return tx.Model(&model.Post{}).Where("id = ?", postID).Update("comments", gorm.Expr("comments + ?", 1)).Error
 }

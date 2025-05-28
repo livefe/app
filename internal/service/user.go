@@ -28,28 +28,18 @@ var (
 	ErrDeactivateFailed = errors.New(constant.ErrDeactivateFailed)
 )
 
-// 使用jwt包中的常量
-// 此处不再需要定义TokenBlacklistPrefix常量
-
 // UserService 用户服务接口
 type UserService interface {
-	// 认证方法
 	// SendVerificationCode 发送验证码
 	SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error)
 	// VerificationCodeLogin 验证码登录
 	VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error)
 	// Logout 退出登录
 	Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error)
-
-	// 查询方法
-	// GetUserInfo 获取用户信息
-	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
-	// UpdateProfile 更新用户资料
-	UpdateProfile(ctx context.Context, req *dto.UpdateProfileRequest, userID uint) (*dto.UserProfileResponse, error)
-
-	// 账号管理方法
 	// DeactivateAccount 注销账号
 	DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error
+	// GetUserInfo 获取用户信息
+	GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error)
 }
 
 // userService 用户服务实现
@@ -72,21 +62,15 @@ func NewUserService(
 	}
 }
 
-// 工具函数
-
 // generateVerificationCode 生成指定长度的随机验证码
 func generateVerificationCode(length int) string {
 	// 使用utils包中的函数生成随机数字
 	return utils.GenerateRandomDigits(length)
 }
 
-// 认证方法
-
 // SendVerificationCode 发送验证码
 func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVerificationCodeRequest) (*dto.SendVerificationCodeResponse, error) {
-	logger.Info(ctx, "开始处理发送验证码请求",
-		logger.String("mobile", req.Mobile),
-		logger.String("type", string(req.Type)))
+	logger.Info(ctx, "开始处理发送验证码请求", logger.String("mobile", req.Mobile), logger.String("type", string(req.Type)))
 
 	code := generateVerificationCode(constant.VerificationCodeLength)
 
@@ -100,10 +84,7 @@ func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVer
 	key := prefix + req.Mobile
 	err := redis.Set(key, code, constant.VerificationCodeExpiration)
 	if err != nil {
-		logger.Error(ctx, "保存验证码到Redis失败",
-			logger.String("mobile", req.Mobile),
-			logger.String("type", string(req.Type)),
-			logger.Err(err))
+		logger.Error(ctx, "保存验证码到Redis失败", logger.String("mobile", req.Mobile), logger.String("type", string(req.Type)), logger.Err(err))
 		return nil, fmt.Errorf("保存验证码失败: %w", err)
 	}
 
@@ -160,44 +141,36 @@ func (s *userService) SendVerificationCode(ctx context.Context, req *dto.SendVer
 	_ = s.smsRepo.Create(smsRecord)
 
 	logger.Info(ctx, "验证码发送成功", logger.String("mobile", req.Mobile))
+
 	return &dto.SendVerificationCodeResponse{Message: "验证码已发送"}, nil
 }
 
 // VerificationCodeLogin 验证码登录
 func (s *userService) VerificationCodeLogin(ctx context.Context, req *dto.VerificationCodeLoginRequest) (*dto.LoginResponse, error) {
-	// 记录开始处理请求的日志
-	logger.Info(ctx, "开始处理验证码登录请求",
-		logger.String("mobile", req.Mobile))
+	logger.Info(ctx, "开始处理验证码登录请求", logger.String("mobile", req.Mobile))
 
 	// 从Redis获取验证码（登录验证码）
 	key := constant.VerificationCodePrefixLogin + req.Mobile
 	savedCode, err := redis.Get(key)
 	if err != nil {
-		logger.Error(ctx, "获取验证码失败",
-			logger.String("mobile", req.Mobile),
-			logger.Err(err))
+		logger.Error(ctx, "获取验证码失败", logger.String("mobile", req.Mobile), logger.Err(err))
 		return nil, ErrInvalidCode
 	}
 
 	if savedCode != req.Code {
-		logger.Warn(ctx, "验证码不匹配",
-			logger.String("mobile", req.Mobile),
-			logger.String("input_code", req.Code),
-			logger.String("saved_code", savedCode))
+		logger.Warn(ctx, "验证码不匹配", logger.String("mobile", req.Mobile), logger.String("input_code", req.Code), logger.String("saved_code", savedCode))
 		return nil, ErrInvalidCode
 	}
 
 	// 验证成功后删除验证码
 	_, _ = redis.Del(key)
-	logger.Debug(ctx, "验证码验证成功，已删除缓存",
-		logger.String("mobile", req.Mobile))
+	logger.Debug(ctx, "验证码验证成功，已删除缓存", logger.String("mobile", req.Mobile))
 
 	// 查找用户
 	user, err := s.userRepo.FindByMobile(req.Mobile)
 	if err != nil {
 		// 如果用户不存在，则创建新用户
-		logger.Info(ctx, "用户不存在，创建新用户",
-			logger.String("mobile", req.Mobile))
+		logger.Info(ctx, "用户不存在，创建新用户", logger.String("mobile", req.Mobile))
 
 		user = &model.User{
 			Mobile:   req.Mobile,
@@ -209,32 +182,23 @@ func (s *userService) VerificationCodeLogin(ctx context.Context, req *dto.Verifi
 		// 保存新用户
 		err = s.userRepo.Create(user)
 		if err != nil {
-			logger.Error(ctx, "创建用户失败",
-				logger.String("mobile", req.Mobile),
-				logger.Err(err))
+			logger.Error(ctx, "创建用户失败", logger.String("mobile", req.Mobile), logger.Err(err))
 			return nil, fmt.Errorf("创建用户失败: %w", err)
 		}
 
-		logger.Info(ctx, "新用户创建成功",
-			logger.Uint("user_id", user.ID),
-			logger.String("mobile", user.Mobile))
+		logger.Info(ctx, "新用户创建成功", logger.String("mobile", user.Mobile))
 	}
 
 	// 检查用户状态
 	if user.Status != constant.UserStatusNormal {
-		logger.Warn(ctx, "账号已被禁用",
-			logger.Uint("user_id", user.ID),
-			logger.String("mobile", user.Mobile),
-			logger.Int("status", user.Status))
+		logger.Warn(ctx, "账号已被禁用", logger.String("mobile", user.Mobile), logger.Int("status", user.Status))
 		return nil, errors.New("账号已被禁用")
 	}
 
 	// 生成JWT令牌
 	token, err := jwt.GenerateToken(user.ID, user.Username, "")
 	if err != nil {
-		logger.Error(ctx, "生成令牌失败",
-			logger.Uint("user_id", user.ID),
-			logger.Err(err))
+		logger.Error(ctx, "生成令牌失败", logger.Err(err))
 		return nil, fmt.Errorf("生成令牌失败: %w", err)
 	}
 
@@ -250,17 +214,13 @@ func (s *userService) VerificationCodeLogin(ctx context.Context, req *dto.Verifi
 	response.User.Nickname = user.Nickname
 	response.User.Avatar = user.Avatar
 
-	// 登录成功
-	logger.Info(ctx, "用户登录成功",
-		logger.Uint("user_id", user.ID),
-		logger.String("mobile", user.Mobile))
+	logger.Info(ctx, "用户登录成功", logger.String("mobile", user.Mobile))
 
 	return response, nil
 }
 
 // Logout 退出登录
 func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.LogoutResponse, error) {
-	// 记录开始处理请求的日志
 	logger.Info(ctx, "开始处理退出登录请求")
 
 	// 解析令牌，获取过期时间
@@ -288,36 +248,77 @@ func (s *userService) Logout(ctx context.Context, req *dto.LogoutRequest) (*dto.
 	blacklistKey := constant.TokenBlacklistPrefix + req.Token
 	err = redis.Set(blacklistKey, "revoked", ttl)
 	if err != nil {
-		logger.Error(ctx, "将令牌加入黑名单失败",
-			logger.String("token", req.Token),
-			logger.Err(err))
+		logger.Error(ctx, "将令牌加入黑名单失败", logger.String("token", req.Token), logger.Err(err))
 		return nil, fmt.Errorf("退出登录失败: %w", err)
 	}
 
-	logger.Info(ctx, "用户退出登录成功",
-		logger.String("username", claims.Username),
-		logger.Uint("user_id", claims.UserID))
+	logger.Info(ctx, "用户退出登录成功", logger.String("username", claims.Username))
 
 	return &dto.LogoutResponse{Message: "退出登录成功"}, nil
 }
 
-// 查询方法
+// DeactivateAccount 注销账号
+func (s *userService) DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error {
+	logger.Info(ctx, "开始处理注销账号请求", logger.String("mobile", req.Mobile))
+
+	// 验证验证码（注销验证码）
+	key := constant.VerificationCodePrefixDeactivate + req.Mobile
+	savedCode, err := redis.Get(key)
+	if err != nil {
+		logger.Error(ctx, "获取注销验证码失败", logger.String("mobile", req.Mobile), logger.Err(err))
+		return ErrInvalidCode
+	}
+
+	if savedCode != req.Code {
+		logger.Warn(ctx, "注销验证码不匹配", logger.String("mobile", req.Mobile), logger.String("input_code", req.Code), logger.String("saved_code", savedCode))
+		return ErrInvalidCode
+	}
+
+	// 验证成功后删除验证码
+	_, _ = redis.Del(key)
+	logger.Debug(ctx, "注销验证码验证成功，已删除缓存", logger.String("mobile", req.Mobile))
+
+	// 查找用户
+	user, err := s.userRepo.FindByID(req.UserID)
+	if err != nil {
+		if errors.Is(err, repository.ErrRecordNotFound) {
+			logger.Warn(ctx, "要注销的用户不存在")
+			return ErrUserNotFound
+		}
+		logger.Error(ctx, "查询用户失败", logger.Err(err))
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 验证手机号是否匹配
+	if user.Mobile != req.Mobile {
+		logger.Warn(ctx, "手机号不匹配，注销失败", logger.String("request_mobile", req.Mobile), logger.String("user_mobile", user.Mobile))
+		return errors.New("手机号不匹配，注销失败")
+	}
+
+	// 执行注销操作（软删除）
+	err = s.userRepo.SoftDelete(req.UserID)
+	if err != nil {
+		logger.Error(ctx, "执行账号注销失败", logger.Err(err))
+		return ErrDeactivateFailed
+	}
+
+	logger.Info(ctx, "账号注销成功", logger.String("mobile", user.Mobile))
+
+	return nil
+}
 
 // GetUserInfo 获取用户信息
 func (s *userService) GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoResponse, error) {
-	// 记录开始处理请求的日志
-	logger.Info(ctx, "开始获取用户信息", logger.Uint("user_id", id))
+	logger.Info(ctx, "开始获取用户信息")
 
 	// 根据ID查找用户
 	user, err := s.userRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
-			logger.Warn(ctx, "用户不存在", logger.Uint("user_id", id))
+			logger.Warn(ctx, "用户不存在")
 			return nil, ErrUserNotFound
 		}
-		logger.Error(ctx, "查询用户失败",
-			logger.Uint("user_id", id),
-			logger.Err(err))
+		logger.Error(ctx, "查询用户失败", logger.Err(err))
 		return nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 
@@ -332,119 +333,7 @@ func (s *userService) GetUserInfo(ctx context.Context, id uint) (*dto.UserInfoRe
 		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 
-	// 记录成功日志
-	logger.Info(ctx, "获取用户信息成功",
-		logger.Uint("user_id", user.ID),
-		logger.String("username", user.Username))
-
-	return response, nil
-}
-
-// 账号管理方法
-
-// DeactivateAccount 注销账号
-func (s *userService) DeactivateAccount(ctx context.Context, req *dto.DeactivateAccountRequest) error {
-	// 记录开始处理请求的日志
-	logger.Info(ctx, "开始处理注销账号请求",
-		logger.Uint("user_id", req.UserID),
-		logger.String("mobile", req.Mobile))
-
-	// 验证验证码（注销验证码）
-	key := constant.VerificationCodePrefixDeactivate + req.Mobile
-	savedCode, err := redis.Get(key)
-	if err != nil {
-		logger.Error(ctx, "获取注销验证码失败",
-			logger.String("mobile", req.Mobile),
-			logger.Err(err))
-		return ErrInvalidCode
-	}
-
-	if savedCode != req.Code {
-		logger.Warn(ctx, "注销验证码不匹配",
-			logger.String("mobile", req.Mobile),
-			logger.String("input_code", req.Code),
-			logger.String("saved_code", savedCode))
-		return ErrInvalidCode
-	}
-
-	// 验证成功后删除验证码
-	_, _ = redis.Del(key)
-	logger.Debug(ctx, "注销验证码验证成功，已删除缓存",
-		logger.String("mobile", req.Mobile))
-
-	// 查找用户
-	user, err := s.userRepo.FindByID(req.UserID)
-	if err != nil {
-		if errors.Is(err, repository.ErrRecordNotFound) {
-			logger.Warn(ctx, "要注销的用户不存在",
-				logger.Uint("user_id", req.UserID))
-			return ErrUserNotFound
-		}
-		logger.Error(ctx, "查询用户失败",
-			logger.Uint("user_id", req.UserID),
-			logger.Err(err))
-		return fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	// 验证手机号是否匹配
-	if user.Mobile != req.Mobile {
-		logger.Warn(ctx, "手机号不匹配，注销失败",
-			logger.Uint("user_id", req.UserID),
-			logger.String("request_mobile", req.Mobile),
-			logger.String("user_mobile", user.Mobile))
-		return errors.New("手机号不匹配，注销失败")
-	}
-
-	// 执行注销操作（软删除）
-	err = s.userRepo.SoftDelete(req.UserID)
-	if err != nil {
-		logger.Error(ctx, "执行账号注销失败",
-			logger.Uint("user_id", req.UserID),
-			logger.Err(err))
-		return ErrDeactivateFailed
-	}
-
-	logger.Info(ctx, "账号注销成功",
-		logger.Uint("user_id", req.UserID),
-		logger.String("mobile", user.Mobile))
-
-	return nil
-}
-
-// UpdateProfile 更新用户资料
-func (s *userService) UpdateProfile(ctx context.Context, req *dto.UpdateProfileRequest, userID uint) (*dto.UserProfileResponse, error) {
-	// 记录开始处理请求的日志
-	logger.Info(ctx, "开始更新用户资料", logger.Uint("user_id", userID))
-
-	// 查找用户
-	user, err := s.userRepo.FindByID(userID)
-	if err != nil {
-		if errors.Is(err, repository.ErrRecordNotFound) {
-			logger.Warn(ctx, "用户不存在", logger.Uint("user_id", userID))
-			return nil, ErrUserNotFound
-		}
-		logger.Error(ctx, "查询用户失败",
-			logger.Uint("user_id", userID),
-			logger.Err(err))
-		return nil, fmt.Errorf("查询用户失败: %w", err)
-	}
-
-	// 更新昵称
-	if req.Nickname != "" {
-		user.Nickname = req.Nickname
-	}
-
-	// 构建响应
-	response := &dto.UserProfileResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Nickname: user.Nickname,
-		Mobile:   user.Mobile,
-		Avatar:   user.Avatar,
-	}
-
-	// 记录成功日志
-	logger.Info(ctx, "更新用户资料成功", logger.Uint("user_id", userID))
+	logger.Info(ctx, "获取用户信息成功", logger.String("username", user.Username))
 
 	return response, nil
 }

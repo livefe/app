@@ -12,19 +12,15 @@ import (
 )
 
 // RelationService 用户关系服务接口
-// 整合了粉丝关注和好友关系的功能
 type RelationService interface {
-	// 粉丝关注相关方法
-	// GetFollowers 获取粉丝列表
-	GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error)
-	// GetFollowing 获取关注列表
-	GetFollowing(ctx context.Context, req *dto.GetFollowingRequest) (*dto.GetFollowingResponse, error)
 	// FollowUser 关注用户
 	FollowUser(ctx context.Context, req *dto.FollowUserRequest, userID uint) (*dto.FollowUserResponse, error)
 	// UnfollowUser 取消关注用户
 	UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error
-
-	// 好友关系相关方法
+	// GetFollowers 获取粉丝列表
+	GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error)
+	// GetFollowing 获取关注列表
+	GetFollowing(ctx context.Context, req *dto.GetFollowingRequest) (*dto.GetFollowingResponse, error)
 	// AddFriend 添加好友
 	AddFriend(ctx context.Context, req *dto.AddFriendRequest, userID uint) (*dto.AddFriendResponse, error)
 	// AcceptFriend 接受好友请求
@@ -59,7 +55,62 @@ func NewRelationService(
 	}
 }
 
-// ==================== 粉丝关注相关方法 ====================
+// FollowUser 关注用户
+func (s *relationService) FollowUser(ctx context.Context, req *dto.FollowUserRequest, userID uint) (*dto.FollowUserResponse, error) {
+	// 检查目标用户是否存在
+	_, err := s.userRepo.FindByID(req.TargetID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("目标用户不存在")
+		}
+		return nil, err
+	}
+
+	// 检查是否已关注
+	existingFollower, err := s.followerRepo.GetFollower(userID, req.TargetID)
+	exists := err == nil && existingFollower != nil
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	if exists {
+		return nil, errors.New("已经关注该用户")
+	}
+
+	// 创建关注关系
+	newFollower := &model.UserFollower{
+		UserID:   userID,
+		TargetID: req.TargetID,
+	}
+
+	// 保存到数据库
+	err = s.followerRepo.CreateFollower(newFollower)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.FollowUserResponse{
+		ID:        newFollower.ID,
+		UserID:    newFollower.UserID,
+		TargetID:  newFollower.TargetID,
+		CreatedAt: newFollower.CreatedAt,
+	}, nil
+}
+
+// UnfollowUser 取消关注用户
+func (s *relationService) UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error {
+	// 检查是否已关注
+	follower, err := s.followerRepo.GetFollower(userID, req.TargetID)
+	exists := err == nil && follower != nil
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if !exists {
+		return errors.New("未关注该用户")
+	}
+
+	// 删除关注关系
+	return s.followerRepo.DeleteFollower(userID, req.TargetID)
+}
 
 // GetFollowers 获取粉丝列表
 func (s *relationService) GetFollowers(ctx context.Context, req *dto.GetFollowersRequest) (*dto.GetFollowersResponse, error) {
@@ -122,65 +173,6 @@ func (s *relationService) GetFollowing(ctx context.Context, req *dto.GetFollowin
 		List:  list,
 	}, nil
 }
-
-// FollowUser 关注用户
-func (s *relationService) FollowUser(ctx context.Context, req *dto.FollowUserRequest, userID uint) (*dto.FollowUserResponse, error) {
-	// 检查目标用户是否存在
-	_, err := s.userRepo.FindByID(req.TargetID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("目标用户不存在")
-		}
-		return nil, err
-	}
-
-	// 检查是否已关注
-	existingFollower, err := s.followerRepo.GetFollower(userID, req.TargetID)
-	exists := err == nil && existingFollower != nil
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
-	}
-	if exists {
-		return nil, errors.New("已经关注该用户")
-	}
-
-	// 创建关注关系
-	newFollower := &model.UserFollower{
-		UserID:   userID,
-		TargetID: req.TargetID,
-	}
-
-	// 保存到数据库
-	err = s.followerRepo.CreateFollower(newFollower)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dto.FollowUserResponse{
-		ID:        newFollower.ID,
-		UserID:    newFollower.UserID,
-		TargetID:  newFollower.TargetID,
-		CreatedAt: newFollower.CreatedAt,
-	}, nil
-}
-
-// UnfollowUser 取消关注用户
-func (s *relationService) UnfollowUser(ctx context.Context, req *dto.UnfollowUserRequest, userID uint) error {
-	// 检查是否已关注
-	follower, err := s.followerRepo.GetFollower(userID, req.TargetID)
-	exists := err == nil && follower != nil
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
-	}
-	if !exists {
-		return errors.New("未关注该用户")
-	}
-
-	// 删除关注关系
-	return s.followerRepo.DeleteFollower(userID, req.TargetID)
-}
-
-// ==================== 好友关系相关方法 ====================
 
 // AddFriend 添加好友
 func (s *relationService) AddFriend(ctx context.Context, req *dto.AddFriendRequest, userID uint) (*dto.AddFriendResponse, error) {

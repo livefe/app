@@ -38,10 +38,7 @@ func SystemHealthCheckTask(ctx context.Context) error {
 	systemResourceStatus := checkSystemResources(ctx)
 
 	// 记录健康检查结果
-	logger.Info(ctx, "系统健康检查结果",
-		zap.Bool("database_status", dbStatus),
-		zap.Bool("redis_status", redisStatus),
-		zap.Bool("system_resources_status", systemResourceStatus))
+	logger.Info(ctx, "系统健康检查结果", zap.Bool("database_status", dbStatus), zap.Bool("redis_status", redisStatus), zap.Bool("system_resources_status", systemResourceStatus))
 
 	// 如果任何组件检查失败，返回错误
 	if !dbStatus || !redisStatus || !systemResourceStatus {

@@ -153,14 +153,9 @@ func (s *Scheduler) RegisterWithOptions(name, spec string, handler TaskHandler, 
 		elapsed := time.Since(start)
 
 		if err != nil {
-			logger.Error(ctx, "定时任务执行失败",
-				zap.String("task", name),
-				zap.Duration("elapsed", elapsed),
-				zap.Error(err))
+			logger.Error(ctx, "定时任务执行失败", zap.String("task", name), zap.Duration("elapsed", elapsed), zap.Error(err))
 		} else {
-			logger.Info(ctx, "定时任务执行成功",
-				zap.String("task", name),
-				zap.Duration("elapsed", elapsed))
+			logger.Info(ctx, "定时任务执行成功", zap.String("task", name), zap.Duration("elapsed", elapsed))
 		}
 	}
 
@@ -243,14 +238,9 @@ func (s *Scheduler) RunTask(name string) error {
 		elapsed := time.Since(start)
 
 		if err != nil {
-			logger.Error(ctx, "手动执行定时任务失败",
-				zap.String("task", name),
-				zap.Duration("elapsed", elapsed),
-				zap.Error(err))
+			logger.Error(ctx, "手动执行定时任务失败", zap.String("task", name), zap.Duration("elapsed", elapsed), zap.Error(err))
 		} else {
-			logger.Info(ctx, "手动执行定时任务成功",
-				zap.String("task", name),
-				zap.Duration("elapsed", elapsed))
+			logger.Info(ctx, "手动执行定时任务成功", zap.String("task", name), zap.Duration("elapsed", elapsed))
 		}
 	}()
 
