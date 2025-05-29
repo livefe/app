@@ -91,6 +91,7 @@ func (s *postService) CreatePost(ctx context.Context, req *dto.CreatePostRequest
 		ID:        post.ID,
 		UserID:    post.UserID,
 		Content:   post.Content,
+		Images:    imageURLs,
 		CreatedAt: post.CreatedAt,
 	}, nil
 }

@@ -16,7 +16,7 @@ type CreatePostResponse struct {
 	ID        uint      `json:"id"`
 	UserID    uint      `json:"user_id"`
 	Content   string    `json:"content"`
-	Images    string    `json:"images"`
+	Images    []string  `json:"images"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
