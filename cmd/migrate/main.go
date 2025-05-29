@@ -42,6 +42,7 @@ func main() {
 		&model.Post{},
 		&model.PostComment{},
 		&model.PostImage{},
+		&model.TempImage{},
 		// 在此处添加其他模型
 	}
 
