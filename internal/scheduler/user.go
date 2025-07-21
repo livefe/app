@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"runtime"
 
+	"app/pkg/database"
 	"app/pkg/logger"
+	"app/pkg/redis"
 
 	"go.uber.org/zap"
 )
@@ -52,27 +55,48 @@ func SystemHealthCheckTask(ctx context.Context) error {
 // checkDatabaseConnection 检查数据库连接状态
 func checkDatabaseConnection(ctx context.Context) bool {
 	logger.Info(ctx, "检查数据库连接")
-	// 实际实现中应该使用数据库连接池执行简单查询验证连接
-	// 例如: db.Ping() 或执行 SELECT 1
-	// 这里简化为模拟检查
+	db := database.GetDB()
+	if db == nil {
+		logger.Error(ctx, "数据库未初始化")
+		return false
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Error(ctx, "获取SQL DB失败", zap.Error(err))
+		return false
+	}
+	if err := sqlDB.Ping(); err != nil {
+		logger.Error(ctx, "数据库Ping失败", zap.Error(err))
+		return false
+	}
 	return true
 }
 
 // checkRedisConnection 检查Redis连接状态
 func checkRedisConnection(ctx context.Context) bool {
 	logger.Info(ctx, "检查Redis连接")
-	// 实际实现中应该使用Redis客户端执行PING命令验证连接
-	// 例如: client.Ping(ctx).Result()
-	// 这里简化为模拟检查
+	if redis.Client == nil {
+		logger.Error(ctx, "Redis客户端未初始化")
+		return false
+	}
+	_, err := redis.Client.Ping(ctx).Result()
+	if err != nil {
+		logger.Error(ctx, "Redis Ping失败", zap.Error(err))
+		return false
+	}
 	return true
 }
 
 // checkSystemResources 检查系统资源使用情况
 func checkSystemResources(ctx context.Context) bool {
 	logger.Info(ctx, "检查系统资源使用情况")
-	// 实际实现中应该检查CPU、内存、磁盘使用率等
-	// 可以使用系统调用或第三方库获取资源使用情况
-	// 这里简化为模拟检查
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// 示例: 检查内存使用是否超过阈值 (这里设为80% of 1GB for demo)
+	if m.Sys > 800*1024*1024 {
+		logger.Warn(ctx, "内存使用过高", zap.Uint64("used", m.Sys))
+		return false
+	}
 	return true
 }
 
