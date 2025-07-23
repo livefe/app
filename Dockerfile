@@ -6,6 +6,8 @@ WORKDIR /build
 
 COPY go.mod go.sum ./
 
+RUN --mount=type=cache,target=/go/pkg/mod/
+
 RUN go mod download
 
 COPY . .
